@@ -8,10 +8,14 @@ import yaml
 
 DEFAULT_CONFIG_PATH = Path("~/.remoclip.yaml").expanduser()
 
+SECURITY_TOKEN_HEADER = "X-RemoClip-Token"
+
+
 DEFAULT_CONFIG: Dict[str, Any] = {
     "server": "127.0.0.1",
     "port": 35612,
     "db": "~/.remoclip.sqlite",
+    "security_token": None,
 }
 
 
@@ -20,6 +24,7 @@ class RemoClipConfig:
     server: str
     port: int
     db: Path
+    security_token: Optional[str] = None
 
     @property
     def db_path(self) -> Path:
@@ -41,4 +46,9 @@ def load_config(path: Optional[str] = None) -> RemoClipConfig:
         server=str(data["server"]),
         port=int(data["port"]),
         db=Path(str(data["db"])),
+        security_token=(
+            str(data["security_token"])
+            if data.get("security_token") is not None
+            else None
+        ),
     )

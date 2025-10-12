@@ -15,6 +15,7 @@ def test_load_config_uses_defaults_when_file_missing(tmp_path, monkeypatch):
     assert loaded.server == config.DEFAULT_CONFIG["server"]
     assert loaded.port == config.DEFAULT_CONFIG["port"]
     assert loaded.db_path == Path(config.DEFAULT_CONFIG["db"]).expanduser()
+    assert loaded.security_token is None
 
 
 def test_load_config_overrides_defaults(tmp_path):
@@ -25,6 +26,7 @@ def test_load_config_overrides_defaults(tmp_path):
             server: example.com
             port: 4000
             db: ~/custom.sqlite
+            security_token: secret
             """
         ).strip()
     )
@@ -34,3 +36,4 @@ def test_load_config_overrides_defaults(tmp_path):
     assert loaded.server == "example.com"
     assert loaded.port == 4000
     assert loaded.db_path == Path("~/custom.sqlite").expanduser()
+    assert loaded.security_token == "secret"

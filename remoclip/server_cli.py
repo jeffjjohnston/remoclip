@@ -3,12 +3,17 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pyperclip
 from flask import Flask, jsonify, request
 
-from .config import DEFAULT_CONFIG_PATH, load_config, RemoClipConfig
+from .config import (
+    DEFAULT_CONFIG_PATH,
+    SECURITY_TOKEN_HEADER,
+    RemoClipConfig,
+    load_config,
+)
 from .db import ClipboardEvent, create_session_factory, session_scope
 
 
@@ -16,6 +21,18 @@ def create_app(config: RemoClipConfig) -> Flask:
     app = Flask(__name__)
     session_factory = create_session_factory(config.db_path)
     app.config["SESSION_FACTORY"] = session_factory
+
+    def _verify_token() -> Optional[Any]:
+        if not config.security_token:
+            return None
+        header = request.headers.get(SECURITY_TOKEN_HEADER)
+        if header != config.security_token:
+            return jsonify({"error": "invalid token"}), 401
+        return None
+
+    @app.before_request
+    def _enforce_token() -> Optional[Any]:
+        return _verify_token()
 
     def _log_event(hostname: str, action: str, content: str) -> None:
         with session_scope(session_factory) as session:
