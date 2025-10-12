@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "remoclip"
+version = "0.1.0"
+description = "Remote clipboard server and client CLI tools."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "remoclip maintainers" },
+]
+dependencies = [
+    "Flask>=2.2",
+    "SQLAlchemy>=1.4",
+    "PyYAML>=6.0",
+    "requests>=2.31",
+    "pyperclip>=1.8",
+]
+
+[project.scripts]
+remoclip = "remoclip.client_cli:main"
+remoclip_server = "remoclip.server_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
