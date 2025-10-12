@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Dict
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 
-from remoclip.config import RemoClipConfig
+import remoclip.config as config_module
 from remoclip.server_cli import create_app
+
+RemoClipConfig = config_module.RemoClipConfig
+SECURITY_TOKEN_HEADER = getattr(config_module, "SECURITY_TOKEN_HEADER", None)
+assert SECURITY_TOKEN_HEADER is not None
 
 
 @pytest.fixture
@@ -37,6 +45,19 @@ def client(app):
     return app.test_client()
 
 
+@pytest.fixture
+def secure_client(tmp_path, in_memory_clipboard):
+    config = RemoClipConfig(
+        server="127.0.0.1",
+        port=5000,
+        db=tmp_path / "db.sqlite",
+        security_token="shh",
+    )
+    application = create_app(config)
+    application.config.update(TESTING=True)
+    return application.test_client()
+
+
 def test_copy_paste_and_history_flow(client, in_memory_clipboard):
     response = client.post("/copy", json={"hostname": "test", "content": "hello"})
     assert response.status_code == 200
@@ -62,3 +83,18 @@ def test_history_limit_parameter(client):
     history = response.get_json()["history"]
     assert len(history) == 1
     assert history[0]["content"] == "world"
+
+
+def test_security_token_required(secure_client):
+    response = secure_client.post(
+        "/copy",
+        json={"hostname": "test", "content": "secret"},
+    )
+    assert response.status_code == 401
+
+    response = secure_client.post(
+        "/copy",
+        json={"hostname": "test", "content": "secret"},
+        headers={SECURITY_TOKEN_HEADER: "shh"},
+    )
+    assert response.status_code == 200

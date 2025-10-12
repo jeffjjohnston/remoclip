@@ -8,13 +8,21 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from .config import DEFAULT_CONFIG_PATH, load_config, RemoClipConfig
+from .config import (
+    DEFAULT_CONFIG_PATH,
+    SECURITY_TOKEN_HEADER,
+    RemoClipConfig,
+    load_config,
+)
 
 
 class RemoClipClient:
     def __init__(self, config: RemoClipConfig):
         self.config = config
         self.base_url = f"http://{config.server}:{config.port}"
+        self._headers = {}
+        if config.security_token:
+            self._headers[SECURITY_TOKEN_HEADER] = config.security_token
 
     def _payload(self, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         payload = {"hostname": socket.gethostname()}
@@ -26,6 +34,7 @@ class RemoClipClient:
         response = requests.post(
             f"{self.base_url}/copy",
             json=self._payload({"content": content}),
+            headers=self._headers,
             timeout=timeout,
         )
         response.raise_for_status()
@@ -35,6 +44,7 @@ class RemoClipClient:
         response = requests.get(
             f"{self.base_url}/paste",
             json=self._payload(),
+            headers=self._headers,
             timeout=timeout,
         )
         response.raise_for_status()
@@ -48,6 +58,7 @@ class RemoClipClient:
         response = requests.get(
             f"{self.base_url}/history",
             json=self._payload(extra),
+            headers=self._headers,
             timeout=timeout,
         )
         response.raise_for_status()
