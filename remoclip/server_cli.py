@@ -3,8 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import datetime, timezone
 from typing import Any
+from datetime import datetime, timezone
+from werkzeug.serving import WSGIRequestHandler, make_server
 
 import pyperclip
 from flask import Flask, jsonify, request
@@ -16,6 +17,50 @@ from .config import (
     load_config,
 )
 from .db import ClipboardEvent, create_session_factory, session_scope
+
+
+class LoggingWSGIRequestHandler(WSGIRequestHandler):
+    """WSGI request handler that forwards access logs to :mod:`logging`."""
+
+    level_map = {
+        "info": logging.INFO,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+    }
+
+    def log(self, type: str, message: str, *args: Any) -> None:  # pragma: no cover - IO heavy
+        logger = logging.getLogger("werkzeug.server")
+        level = self.level_map.get(type, logging.INFO)
+        formatted = message % args if args else message
+        logger.log(
+            level,
+            "%s - - [%s] %s",
+            self.address_string(),
+            self.log_date_time_string(),
+            formatted,
+        )
+
+    def log_request(
+        self, code: int | str = "-", size: int | str = "-"
+    ) -> None:  # pragma: no cover - IO heavy
+        super().log_request(code, size)
+
+
+def serve(app: Flask, host: str, port: int) -> None:
+    """Run *app* on *host*:*port* with structured logging."""
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    logging.getLogger().setLevel(logging.INFO)
+    logging.info("Listening on http://%s:%s", host, port)
+
+    server = make_server(host, port, app, request_handler=LoggingWSGIRequestHandler)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:  # pragma: no cover - manual interrupt
+        logging.info("Shutting down")
+    finally:
+        server.server_close()
 
 
 def create_app(config: RemoClipConfig) -> Flask:
@@ -165,7 +210,7 @@ def main() -> None:
     config = load_config(args.config)
     app = create_app(config)
 
-    app.run(host=config.server, port=config.port, use_reloader=False)
+    serve(app, config.server, config.port)
 
 
 if __name__ == "__main__":  # pragma: no cover

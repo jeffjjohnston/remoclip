@@ -44,6 +44,11 @@ Pass `--config /path/to/config.yaml` to either CLI to override the default path.
 remoclip_server --config ~/.remoclip.yaml
 ```
 
+On startup the server prints a banner such as `INFO: Listening on http://127.0.0.1:35612`
+and then streams structured access logs to standard output. Each request line follows
+the common log format (including the remote address and HTTP version) and status codes
+are colourised so you can spot redirects, client errors, and server errors at a glance.
+
 The server exposes three JSON endpoints:
 
 - `POST /copy` – set the clipboard. Payload includes `hostname` and `content`.
