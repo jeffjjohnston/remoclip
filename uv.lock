@@ -437,6 +437,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "sqlalchemy" },
+    { name = "werkzeug" },
 ]
 
 [package.optional-dependencies]
@@ -452,6 +453,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.31" },
     { name = "sqlalchemy", specifier = ">=1.4" },
+    { name = "werkzeug", specifier = ">=3.1.3" },
 ]
 provides-extras = ["dev"]
 
