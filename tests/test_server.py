@@ -85,6 +85,35 @@ def test_history_limit_parameter(client):
     assert history[0]["content"] == "world"
 
 
+def test_history_specific_id(client):
+    client.post("/copy", json={"hostname": "test", "content": "hello"})
+    client.post("/copy", json={"hostname": "test", "content": "world"})
+
+    response = client.get("/history", json={"hostname": "test"})
+    assert response.status_code == 200
+    events = response.get_json()["history"]
+    assert len(events) >= 2
+    # Second element corresponds to the first copy action ("hello")
+    target = events[1]
+    assert target["content"] == "hello"
+
+    response = client.get(
+        "/history", json={"hostname": "test", "id": target["id"]}
+    )
+    assert response.status_code == 200
+    history = response.get_json()["history"]
+    assert len(history) == 1
+    assert history[0]["id"] == target["id"]
+    assert history[0]["content"] == "hello"
+
+
+def test_history_specific_id_not_found(client):
+    response = client.get("/history", json={"hostname": "test", "id": 999})
+    assert response.status_code == 404
+    payload = response.get_json()
+    assert payload["error"] == "history entry not found"
+
+
 def test_security_token_required(secure_client):
     response = secure_client.post(
         "/copy",

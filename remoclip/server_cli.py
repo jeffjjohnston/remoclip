@@ -83,27 +83,45 @@ def create_app(config: RemoClipConfig) -> Flask:
             payload = _validate_payload(data, expect_content=False)
             limit_value = data.get("limit")
             limit = int(limit_value) if limit_value is not None else None
+            id_value = data.get("id")
+            event_id = int(id_value) if id_value is not None else None
 
             if limit is not None and limit <= 0:
                 raise ValueError("limit must be positive")
+            if event_id is not None and event_id <= 0:
+                raise ValueError("id must be positive")
 
             with session_scope(session_factory) as session:
-                query = (
-                    session.query(ClipboardEvent)
-                    .order_by(ClipboardEvent.timestamp.desc())
-                )
-                if limit is not None and limit > 0:
-                    query = query.limit(limit)
-                events = [
-                    {
-                        "id": item.id,
-                        "timestamp": item.timestamp.isoformat() + "Z",
-                        "hostname": item.hostname,
-                        "action": item.action,
-                        "content": item.content,
-                    }
-                    for item in query.all()
-                ]
+                if event_id is not None:
+                    event = session.get(ClipboardEvent, event_id)
+                    if event is None:
+                        return jsonify({"error": "history entry not found"}), 404
+                    events = [
+                        {
+                            "id": event.id,
+                            "timestamp": event.timestamp.isoformat() + "Z",
+                            "hostname": event.hostname,
+                            "action": event.action,
+                            "content": event.content,
+                        }
+                    ]
+                else:
+                    query = (
+                        session.query(ClipboardEvent)
+                        .order_by(ClipboardEvent.timestamp.desc())
+                    )
+                    if limit is not None and limit > 0:
+                        query = query.limit(limit)
+                    events = [
+                        {
+                            "id": item.id,
+                            "timestamp": item.timestamp.isoformat() + "Z",
+                            "hostname": item.hostname,
+                            "action": item.action,
+                            "content": item.content,
+                        }
+                        for item in query.all()
+                    ]
             _log_event(str(payload["hostname"]), "history", json.dumps(events))
             return jsonify({"history": events})
         except Exception as exc:  # pragma: no cover - defensive

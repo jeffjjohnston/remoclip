@@ -38,7 +38,7 @@ The server exposes three JSON endpoints:
 
 - `POST /copy` – set the clipboard. Payload includes `hostname` and `content`.
 - `GET /paste` – retrieve the clipboard. Payload includes `hostname`.
-- `GET /history` – retrieve prior clipboard events. Payload includes `hostname` and optional `limit`.
+- `GET /history` – retrieve prior clipboard events. Payload includes `hostname` and optional `limit` or `id`.
 
 Each request is recorded in the configured SQLite database.
 
@@ -58,10 +58,11 @@ Paste the remote clipboard to your terminal:
 remoclip paste
 ```
 
-Fetch history as JSON, optionally limiting the number of entries:
+Fetch history as JSON, optionally limiting the number of entries or retrieving a specific event:
 
 ```
 remoclip history --limit 5
+remoclip history --id 42
 ```
 
 All client requests include the machine hostname for auditing on the server side.

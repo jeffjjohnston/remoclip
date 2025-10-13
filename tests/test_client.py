@@ -27,7 +27,7 @@ class DummyResponse:
 
 
 def test_client_includes_security_token(monkeypatch):
-    captured: Dict[str, Dict[str, str]] = {}
+    captured: Dict[str, Any] = {}
 
     def fake_post(url: str, json: Dict[str, Any], headers=None, timeout: float = 0):
         captured["post"] = headers
@@ -35,7 +35,7 @@ def test_client_includes_security_token(monkeypatch):
 
     def fake_get(url: str, json: Dict[str, Any], headers=None, timeout: float = 0):
         key = "paste" if url.endswith("/paste") else "history"
-        captured[key] = headers
+        captured[key] = {"headers": headers, "json": json}
         payload = {"content": "value"} if key == "paste" else {"history": []}
         return DummyResponse(payload)
 
@@ -54,10 +54,16 @@ def test_client_includes_security_token(monkeypatch):
     assert captured["post"][SECURITY_TOKEN_HEADER] == "secret"
 
     client.paste()
-    assert captured["paste"][SECURITY_TOKEN_HEADER] == "secret"
+    assert captured["paste"]["headers"][SECURITY_TOKEN_HEADER] == "secret"
+    assert SECURITY_TOKEN_HEADER not in captured["paste"]["json"]
 
     client.history()
-    assert captured["history"][SECURITY_TOKEN_HEADER] == "secret"
+    assert captured["history"]["headers"][SECURITY_TOKEN_HEADER] == "secret"
+    assert "id" not in captured["history"]["json"]
+
+    client.history(event_id=5)
+    assert captured["history"]["headers"][SECURITY_TOKEN_HEADER] == "secret"
+    assert captured["history"]["json"]["id"] == 5
 
 
 def test_client_without_token_uses_empty_headers(monkeypatch):
