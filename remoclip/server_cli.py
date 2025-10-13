@@ -90,6 +90,7 @@ def create_app(config: RemoClipConfig) -> Flask:
             with session_scope(session_factory) as session:
                 query = (
                     session.query(ClipboardEvent)
+                    .filter(ClipboardEvent.action != "history")
                     .order_by(ClipboardEvent.timestamp.desc())
                 )
                 if limit is not None and limit > 0:

@@ -85,6 +85,16 @@ def test_history_limit_parameter(client):
     assert history[0]["content"] == "world"
 
 
+def test_history_excludes_history_events(client):
+    client.post("/copy", json={"hostname": "test", "content": "hello"})
+    client.get("/history", json={"hostname": "test"})
+
+    response = client.get("/history", json={"hostname": "test"})
+    assert response.status_code == 200
+    history = response.get_json()["history"]
+    assert history[0]["action"] == "copy"
+
+
 def test_security_token_required(secure_client):
     response = secure_client.post(
         "/copy",
