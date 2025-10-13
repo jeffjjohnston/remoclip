@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -16,24 +16,24 @@ assert SECURITY_TOKEN_HEADER is not None
 
 
 class DummyResponse:
-    def __init__(self, payload: Dict[str, Any]):
+    def __init__(self, payload: dict[str, Any]):
         self._payload = payload
 
     def raise_for_status(self) -> None:
         return None
 
-    def json(self) -> Dict[str, Any]:
+    def json(self) -> dict[str, Any]:
         return self._payload
 
 
 def test_client_includes_security_token(monkeypatch):
-    captured: Dict[str, Any] = {}
+    captured: dict[str, Any] = {}
 
-    def fake_post(url: str, json: Dict[str, Any], headers=None, timeout: float = 0):
+    def fake_post(url: str, json: dict[str, Any], headers=None, timeout: float = 0):
         captured["post"] = headers
         return DummyResponse({"status": "ok"})
 
-    def fake_get(url: str, json: Dict[str, Any], headers=None, timeout: float = 0):
+    def fake_get(url: str, json: dict[str, Any], headers=None, timeout: float = 0):
         key = "paste" if url.endswith("/paste") else "history"
         captured[key] = {"headers": headers, "json": json}
         payload = {"content": "value"} if key == "paste" else {"history": []}
@@ -67,9 +67,9 @@ def test_client_includes_security_token(monkeypatch):
 
 
 def test_client_without_token_uses_empty_headers(monkeypatch):
-    captured: Dict[str, Dict[str, str]] = {}
+    captured: dict[str, dict[str, str]] = {}
 
-    def fake_post(url: str, json: Dict[str, Any], headers=None, timeout: float = 0):
+    def fake_post(url: str, json: dict[str, Any], headers=None, timeout: float = 0):
         captured["post"] = headers
         return DummyResponse({"status": "ok"})
 

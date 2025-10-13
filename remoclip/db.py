@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator
 
 from sqlalchemy import Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -11,11 +11,15 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 Base = declarative_base()
 
 
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class ClipboardEvent(Base):
     __tablename__ = "clipboard_events"
 
     id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     hostname = Column(String(255), nullable=False)
     action = Column(String(32), nullable=False)
     content = Column(Text, nullable=False)
@@ -38,7 +42,7 @@ def create_session_factory(db_path: Path):
 
 @contextmanager
 def session_scope(session_factory) -> Iterator[Session]:
-    session: Optional[Session] = None
+    session: Session | None = None
     try:
         session = session_factory()
         yield session

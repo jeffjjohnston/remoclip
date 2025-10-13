@@ -4,7 +4,7 @@ import argparse
 import json
 import socket
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
@@ -24,13 +24,13 @@ class RemoClipClient:
         if config.security_token:
             self._headers[SECURITY_TOKEN_HEADER] = config.security_token
 
-    def _payload(self, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _payload(self, extra: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = {"hostname": socket.gethostname()}
         if extra:
             payload.update(extra)
         return payload
 
-    def copy(self, content: str, timeout: float = 5.0) -> Dict[str, Any]:
+    def copy(self, content: str, timeout: float = 5.0) -> dict[str, Any]:
         response = requests.post(
             f"{self.base_url}/copy",
             json=self._payload({"content": content}),
@@ -53,11 +53,11 @@ class RemoClipClient:
 
     def history(
         self,
-        limit: Optional[int] = None,
-        event_id: Optional[int] = None,
+        limit: int | None = None,
+        event_id: int | None = None,
         timeout: float = 5.0,
-    ) -> Dict[str, Any]:
-        extra: Dict[str, Any] = {}
+    ) -> dict[str, Any]:
+        extra: dict[str, Any] = {}
         if limit is not None:
             extra["limit"] = limit
         if event_id is not None:

@@ -7,9 +7,9 @@ name = "remoclip"
 version = "0.1.0"
 description = "Remote clipboard server and client CLI tools."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
-    { name = "remoclip maintainers" },
+    { name = "Jeff Johnston" },
 ]
 dependencies = [
     "Flask>=2.2",

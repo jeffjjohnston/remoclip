@@ -3,7 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from typing import Any, Dict, Optional
+from datetime import datetime, timezone
+from typing import Any
 
 import pyperclip
 from flask import Flask, jsonify, request
@@ -22,7 +23,14 @@ def create_app(config: RemoClipConfig) -> Flask:
     session_factory = create_session_factory(config.db_path)
     app.config["SESSION_FACTORY"] = session_factory
 
-    def _verify_token() -> Optional[Any]:
+    def _format_timestamp(value: datetime) -> str:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        else:
+            value = value.astimezone(timezone.utc)
+        return value.isoformat().replace("+00:00", "Z")
+
+    def _verify_token() -> Any | None:
         if not config.security_token:
             return None
         header = request.headers.get(SECURITY_TOKEN_HEADER)
@@ -31,7 +39,7 @@ def create_app(config: RemoClipConfig) -> Flask:
         return None
 
     @app.before_request
-    def _enforce_token() -> Optional[Any]:
+    def _enforce_token() -> Any | None:
         return _verify_token()
 
     def _log_event(hostname: str, action: str, content: str) -> None:
@@ -44,7 +52,7 @@ def create_app(config: RemoClipConfig) -> Flask:
                 )
             )
 
-    def _validate_payload(data: Dict[str, Any], expect_content: bool) -> Dict[str, Any]:
+    def _validate_payload(data: dict[str, Any], expect_content: bool) -> dict[str, Any]:
         if not data or "hostname" not in data:
             raise ValueError("JSON payload must include 'hostname'")
         if expect_content and "content" not in data:
@@ -99,7 +107,7 @@ def create_app(config: RemoClipConfig) -> Flask:
                     events = [
                         {
                             "id": event.id,
-                            "timestamp": event.timestamp.isoformat() + "Z",
+                            "timestamp": _format_timestamp(event.timestamp),
                             "hostname": event.hostname,
                             "action": event.action,
                             "content": event.content,
@@ -116,7 +124,7 @@ def create_app(config: RemoClipConfig) -> Flask:
                     events = [
                         {
                             "id": item.id,
-                            "timestamp": item.timestamp.isoformat() + "Z",
+                            "timestamp": _format_timestamp(item.timestamp),
                             "hostname": item.hostname,
                             "action": item.action,
                             "content": item.content,
