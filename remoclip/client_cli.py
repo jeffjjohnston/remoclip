@@ -4,7 +4,7 @@ import argparse
 import json
 import socket
 import sys
-from http.client import HTTPConnection
+from http.client import HTTPConnection, HTTPException
 from pathlib import Path
 from typing import Any
 
@@ -77,7 +77,7 @@ class UnixSocketSession:
             status = response.status
             reason = response.reason
             headers_map = dict(response.getheaders())
-        except OSError as exc:  # pragma: no cover - connection issues are exceptional
+        except (OSError, HTTPException) as exc:  # pragma: no cover - connection issues are exceptional
             raise requests.RequestException(str(exc)) from exc
         finally:
             connection.close()
