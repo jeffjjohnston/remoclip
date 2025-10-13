@@ -23,6 +23,7 @@ port: 35612
 db: ~/.remoclip.sqlite
 security_token: null
 socket: null
+clipboard_backend: system
 ```
 
 - `server` and `port` describe where the server listens.
@@ -35,6 +36,9 @@ socket: null
   the `server` and `port` values. This allows the same configuration to be used for
   both tools even when an SSH tunnel exposes the server as a socket (for example,
   `ssh -R /tmp/remoclip.sock:localhost:35612 remotehost`).
+- `clipboard_backend` selects how the server stores clipboard data. The default
+  `system` value uses the host clipboard via `pyperclip`. Set the field to `private`
+  to keep clipboard contents in-process for headless deployments.
 
 Pass `--config /path/to/config.yaml` to either CLI to override the default path.
 
@@ -48,6 +52,12 @@ On startup the server prints a banner such as `INFO: Listening on http://127.0.0
 and then streams structured access logs to standard output. Each request line follows
 the common log format (including the remote address and HTTP version) and status codes
 are colourised so you can spot redirects, client errors, and server errors at a glance.
+
+When the server runs with the `private` clipboard backend it keeps clipboard contents in
+memory and seeds them from the most recent copy or paste event in the database so state
+survives restarts. If the configuration requests the `system` backend but `pyperclip`
+is unavailable, the server logs a warning and falls back to the private backend so
+clipboard operations continue to work.
 
 The server exposes three JSON endpoints:
 
