@@ -16,6 +16,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "port": 35612,
     "db": "~/.remoclip.sqlite",
     "security_token": None,
+    "socket": None,
 }
 
 
@@ -25,10 +26,17 @@ class RemoClipConfig:
     port: int
     db: Path
     security_token: str | None = None
+    socket: Path | None = None
 
     @property
     def db_path(self) -> Path:
         return self.db.expanduser()
+
+    @property
+    def socket_path(self) -> Path | None:
+        if self.socket is None:
+            return None
+        return self.socket.expanduser()
 
 
 def load_config(path: str | None = None) -> RemoClipConfig:
@@ -42,6 +50,12 @@ def load_config(path: str | None = None) -> RemoClipConfig:
             if key in loaded and loaded[key] is not None:
                 data[key] = loaded[key]
 
+    socket_value = data.get("socket")
+    if socket_value in (None, ""):
+        socket_path = None
+    else:
+        socket_path = Path(str(socket_value))
+
     return RemoClipConfig(
         server=str(data["server"]),
         port=int(data["port"]),
@@ -51,4 +65,5 @@ def load_config(path: str | None = None) -> RemoClipConfig:
             if data.get("security_token") is not None
             else None
         ),
+        socket=socket_path,
     )
