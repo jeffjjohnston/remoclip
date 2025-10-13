@@ -30,3 +30,6 @@ remoclip_server = "remoclip.server_cli:main"
 [tool.uv.sources]
 remoclip = { path = "src/remoclip" }
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
