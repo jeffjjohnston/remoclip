@@ -5,8 +5,8 @@ This document captures the project conventions you should follow when editing fi
 this repository.
 
 ## Project overview
-- `remoclip/` contains the application code (configuration loader, SQLAlchemy models,
-  Flask server factory, and client CLI helpers).
+- `src/remoclip/` contains the application code (configuration loader, SQLAlchemy
+  models, Flask server factory, and client CLI helpers) using the src/ layout.
 - `tests/` exercises the public behaviours with pytest; add or update tests alongside
   any functional change.
 - The package targets **Python 3.9+** and uses standard library features available in

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv-build>=0.4"]
+build-backend = "uv_build"
 
 [project]
 name = "remoclip"
@@ -27,5 +27,9 @@ dev = ["pytest"]
 remoclip = "remoclip.client_cli:main"
 remoclip_server = "remoclip.server_cli:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.uv.sources]
+remoclip = { path = "src/remoclip" }
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
