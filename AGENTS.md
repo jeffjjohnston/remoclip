@@ -29,6 +29,9 @@ this repository.
   `from __future__ import annotations`.
 - Prefer small, pure helper functions and context managers (see `session_scope`) to keep
   request handlers tidy.
+- The optional `security_token` travels in the `X-RemoClip-Token` header; keep it
+  backwards compatible (missing token means no auth enforced) and update the config
+  loader, server checks, and client headers together.
 - Logging and error handling should be defensive but minimal—follow the pattern used in
   `server_cli.py` (log and return JSON error responses without leaking stack traces).
 - When working with SQLAlchemy models, reuse the `session_scope` context manager instead

@@ -21,10 +21,14 @@ Both tools read the same YAML configuration file. By default this file lives at 
 server: 127.0.0.1
 port: 35612
 db: ~/.remoclip.sqlite
+security_token: null
 ```
 
 - `server` and `port` describe where the server listens.
 - `db` is the SQLite database path used for request logging.
+- `security_token` is an optional shared secret; when set, both the client and server
+  send it in the `X-RemoClip-Token` HTTP header. Leave it `null` (or omit the key) to
+  disable the check.
 
 Pass `--config /path/to/config.yaml` to either CLI to override the default path.
 
@@ -40,7 +44,8 @@ The server exposes three JSON endpoints:
 - `GET /paste` – retrieve the clipboard. Payload includes `hostname`.
 - `GET /history` – retrieve prior clipboard events. Payload includes `hostname` and optional `limit`.
 
-Each request is recorded in the configured SQLite database.
+Each request is recorded in the configured SQLite database. When a `security_token` is
+configured, requests that omit or use an incorrect token receive `401` responses.
 
 ## Using the client
 
@@ -65,3 +70,5 @@ remoclip history --limit 5
 ```
 
 All client requests include the machine hostname for auditing on the server side.
+If the configuration provides a `security_token`, the client automatically attaches it
+using the `X-RemoClip-Token` header so the server accepts the request.
