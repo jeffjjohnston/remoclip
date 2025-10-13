@@ -57,10 +57,11 @@ Copy local input to the remote clipboard (and echo it back):
 echo "Hello" | remoclip copy
 ```
 
-Paste the remote clipboard to your terminal:
+Paste the remote clipboard to your terminal, optionally requesting a specific history entry:
 
 ```
 remoclip paste
+remoclip paste --id 42
 ```
 
 Fetch history as JSON, optionally limiting the number of entries or retrieving a specific event:
