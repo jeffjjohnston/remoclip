@@ -7,7 +7,6 @@ from typing import Any
 from datetime import datetime, timezone
 from werkzeug.serving import WSGIRequestHandler, make_server
 
-import pyperclip
 from flask import Flask, jsonify, request
 
 from .config import (
@@ -15,6 +14,13 @@ from .config import (
     SECURITY_TOKEN_HEADER,
     RemoClipConfig,
     load_config,
+)
+from .clipboard import (
+    ClipboardBackend,
+    PrivateClipboardBackend,
+    SystemClipboardBackend,
+    is_system_clipboard_available,
+    warn_if_unavailable,
 )
 from .db import ClipboardEvent, create_session_factory, session_scope
 
@@ -67,6 +73,31 @@ def create_app(config: RemoClipConfig) -> Flask:
     app = Flask(__name__)
     session_factory = create_session_factory(config.db_path)
     app.config["SESSION_FACTORY"] = session_factory
+
+    logger = logging.getLogger(__name__)
+
+    def _seed_clipboard_value() -> str:
+        with session_scope(session_factory) as session:
+            event = (
+                session.query(ClipboardEvent)
+                .filter(ClipboardEvent.action.in_(["copy", "paste"]))
+                .order_by(ClipboardEvent.timestamp.desc())
+                .first()
+            )
+            if event is not None:
+                return event.content
+        return ""
+
+    def _create_clipboard_backend() -> ClipboardBackend:
+        initial_value = _seed_clipboard_value()
+        if config.clipboard_backend == "system":
+            if is_system_clipboard_available():
+                return SystemClipboardBackend()
+            warn_if_unavailable(logger, "system")
+        return PrivateClipboardBackend(_value=initial_value)
+
+    clipboard_backend = _create_clipboard_backend()
+    app.config["CLIPBOARD_BACKEND"] = clipboard_backend
 
     def _format_timestamp(value: datetime) -> str:
         if value.tzinfo is None:
@@ -121,7 +152,7 @@ def create_app(config: RemoClipConfig) -> Flask:
             data = request.get_json(force=True, silent=False)
             payload = _validate_payload(data, expect_content=True)
             content = str(payload["content"])
-            pyperclip.copy(content)
+            clipboard_backend.copy(content)
             _log_event(str(payload["hostname"]), "copy", content)
             return jsonify({"status": "ok"})
         except Exception as exc:  # pragma: no cover - defensive
@@ -142,7 +173,7 @@ def create_app(config: RemoClipConfig) -> Flask:
                         return jsonify({"error": "history entry not found"}), 404
                     content = event.content
             else:
-                content = pyperclip.paste()
+                content = clipboard_backend.paste()
             _log_event(str(payload["hostname"]), "paste", content)
             return jsonify({"content": content})
         except Exception as exc:  # pragma: no cover - defensive
@@ -199,7 +230,13 @@ def create_app(config: RemoClipConfig) -> Flask:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run remoclip HTTP server.")
+    parser = argparse.ArgumentParser(
+        description="Run remoclip HTTP server.",
+        epilog=(
+            "Configure the clipboard backend in the YAML config file via the "
+            "'clipboard_backend' option (system|private)."
+        ),
+    )
     parser.add_argument(
         "--config",
         default=str(DEFAULT_CONFIG_PATH),

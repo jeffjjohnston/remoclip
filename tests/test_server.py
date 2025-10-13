@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
-from typing import Dict
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 
 import remoclip.config as config_module
+from remoclip.clipboard import PrivateClipboardBackend
 from remoclip.server_cli import create_app
 
 RemoClipConfig = config_module.RemoClipConfig
@@ -17,24 +18,13 @@ assert SECURITY_TOKEN_HEADER is not None
 
 
 @pytest.fixture
-def in_memory_clipboard(monkeypatch):
-    clipboard: Dict[str, str] = {"value": ""}
-
-    def fake_copy(value: str) -> None:
-        clipboard["value"] = value
-
-    def fake_paste() -> str:
-        return clipboard["value"]
-
-    monkeypatch.setattr("remoclip.server_cli.pyperclip.copy", fake_copy)
-    monkeypatch.setattr("remoclip.server_cli.pyperclip.paste", fake_paste)
-
-    return clipboard
-
-
-@pytest.fixture
-def app(tmp_path, in_memory_clipboard):
-    config = RemoClipConfig(server="127.0.0.1", port=5000, db=tmp_path / "db.sqlite")
+def app(tmp_path):
+    config = RemoClipConfig(
+        server="127.0.0.1",
+        port=5000,
+        db=tmp_path / "db.sqlite",
+        clipboard_backend="private",
+    )
     application = create_app(config)
     application.config.update(TESTING=True)
     return application
@@ -46,22 +36,30 @@ def client(app):
 
 
 @pytest.fixture
-def secure_client(tmp_path, in_memory_clipboard):
+def clipboard_backend(app):
+    backend = app.config.get("CLIPBOARD_BACKEND")
+    assert isinstance(backend, PrivateClipboardBackend)
+    return backend
+
+
+@pytest.fixture
+def secure_client(tmp_path):
     config = RemoClipConfig(
         server="127.0.0.1",
         port=5000,
         db=tmp_path / "db.sqlite",
         security_token="shh",
+        clipboard_backend="private",
     )
     application = create_app(config)
     application.config.update(TESTING=True)
     return application.test_client()
 
 
-def test_copy_paste_and_history_flow(client, in_memory_clipboard):
+def test_copy_paste_and_history_flow(client, clipboard_backend):
     response = client.post("/copy", json={"hostname": "test", "content": "hello"})
     assert response.status_code == 200
-    assert in_memory_clipboard["value"] == "hello"
+    assert clipboard_backend.paste() == "hello"
 
     response = client.get("/paste", json={"hostname": "test"})
     assert response.status_code == 200
@@ -139,7 +137,7 @@ def test_security_token_required(secure_client):
     assert response.status_code == 200
 
 
-def test_paste_specific_id(client, in_memory_clipboard):
+def test_paste_specific_id(client, clipboard_backend):
     client.post("/copy", json={"hostname": "test", "content": "hello"})
     client.post("/copy", json={"hostname": "test", "content": "world"})
 
@@ -147,7 +145,7 @@ def test_paste_specific_id(client, in_memory_clipboard):
     events = response.get_json()["history"]
     target = events[1]
 
-    in_memory_clipboard["value"] = "should not be returned"
+    clipboard_backend.copy("should not be returned")
 
     response = client.get(
         "/paste", json={"hostname": "test", "id": target["id"]}
@@ -174,6 +172,41 @@ def test_paste_specific_id_invalid(client):
     assert response.status_code == 400
     payload = response.get_json()
     assert payload["error"] == "id must be an integer"
+
+
+def test_private_backend_seeds_from_history(tmp_path):
+    config = RemoClipConfig(
+        server="127.0.0.1",
+        port=5000,
+        db=tmp_path / "db.sqlite",
+        clipboard_backend="private",
+    )
+    first_app = create_app(config)
+    first_app.config.update(TESTING=True)
+    first_client = first_app.test_client()
+    first_client.post("/copy", json={"hostname": "seed", "content": "persisted"})
+
+    second_app = create_app(config)
+    backend = second_app.config.get("CLIPBOARD_BACKEND")
+    assert isinstance(backend, PrivateClipboardBackend)
+    assert backend.paste() == "persisted"
+
+
+def test_system_backend_falls_back_when_unavailable(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr("remoclip.clipboard.pyperclip", None, raising=False)
+    caplog.set_level(logging.WARNING)
+
+    config = RemoClipConfig(
+        server="127.0.0.1",
+        port=5000,
+        db=tmp_path / "db.sqlite",
+        clipboard_backend="system",
+    )
+    app = create_app(config)
+
+    backend = app.config.get("CLIPBOARD_BACKEND")
+    assert isinstance(backend, PrivateClipboardBackend)
+    assert "falling back to private backend" in caplog.text
 
 
 def test_history_invalid_parameters(client):
