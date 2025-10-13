@@ -51,10 +51,17 @@ class RemoClipClient:
         data = response.json()
         return data.get("content", "")
 
-    def history(self, limit: Optional[int] = None, timeout: float = 5.0) -> Dict[str, Any]:
+    def history(
+        self,
+        limit: Optional[int] = None,
+        event_id: Optional[int] = None,
+        timeout: float = 5.0,
+    ) -> Dict[str, Any]:
         extra: Dict[str, Any] = {}
         if limit is not None:
             extra["limit"] = limit
+        if event_id is not None:
+            extra["id"] = event_id
         response = requests.get(
             f"{self.base_url}/history",
             json=self._payload(extra),
@@ -82,6 +89,11 @@ def main() -> None:
         type=int,
         help="Limit for history entries (only for history command)",
     )
+    parser.add_argument(
+        "--id",
+        type=int,
+        help="Retrieve a specific history entry by id (only for history command)",
+    )
 
     args = parser.parse_args()
     config = load_config(args.config)
@@ -98,7 +110,9 @@ def main() -> None:
         elif args.command in ("history", "h"):
             if args.limit is not None and args.limit <= 0:
                 raise ValueError("limit must be a positive integer")
-            history = client.history(limit=args.limit)
+            if args.id is not None and args.id <= 0:
+                raise ValueError("id must be a positive integer")
+            history = client.history(limit=args.limit, event_id=args.id)
             json.dump(history, sys.stdout, indent=2)
             sys.stdout.write("\n")
     except requests.RequestException as exc:
