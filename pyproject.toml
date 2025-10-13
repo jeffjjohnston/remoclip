@@ -19,6 +19,9 @@ dependencies = [
     "pyperclip>=1.8",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [project.scripts]
 remoclip = "remoclip.client_cli:main"
 remoclip_server = "remoclip.server_cli:main"
