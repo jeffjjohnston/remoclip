@@ -40,10 +40,13 @@ class RemoClipClient:
         response.raise_for_status()
         return response.json()
 
-    def paste(self, timeout: float = 5.0) -> str:
+    def paste(self, event_id: int | None = None, timeout: float = 5.0) -> str:
+        extra: dict[str, Any] | None = None
+        if event_id is not None:
+            extra = {"id": event_id}
         response = requests.get(
             f"{self.base_url}/paste",
-            json=self._payload(),
+            json=self._payload(extra),
             headers=self._headers,
             timeout=timeout,
         )
@@ -92,7 +95,7 @@ def main() -> None:
     parser.add_argument(
         "--id",
         type=int,
-        help="Retrieve a specific history entry by id (only for history command)",
+        help="Retrieve a specific entry by id (available for paste and history commands)",
     )
 
     args = parser.parse_args()
@@ -105,7 +108,9 @@ def main() -> None:
             client.copy(content)
             sys.stdout.write(content)
         elif args.command in ("paste", "p"):
-            content = client.paste()
+            if args.id is not None and args.id <= 0:
+                raise ValueError("id must be a positive integer")
+            content = client.paste(event_id=args.id)
             sys.stdout.write(content)
         elif args.command in ("history", "h"):
             if args.limit is not None and args.limit <= 0:

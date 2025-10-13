@@ -23,6 +23,8 @@ this repository.
    `tests/test_server.py` cases.
 3. Keep the default configuration path (`~/.remoclip.yaml`) and database location
    overridable via the existing helper functions; do not hard-code alternative paths.
+4. When you add or change CLI flags or endpoints, update the README usage examples so
+   they stay aligned with the behaviour.
 
 ## Coding conventions
 - Keep modules fully type annotated; maintain the existing type hint style using

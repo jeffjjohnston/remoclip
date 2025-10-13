@@ -137,3 +137,52 @@ def test_security_token_required(secure_client):
         headers={SECURITY_TOKEN_HEADER: "shh"},
     )
     assert response.status_code == 200
+
+
+def test_paste_specific_id(client, in_memory_clipboard):
+    client.post("/copy", json={"hostname": "test", "content": "hello"})
+    client.post("/copy", json={"hostname": "test", "content": "world"})
+
+    response = client.get("/history", json={"hostname": "test"})
+    events = response.get_json()["history"]
+    target = events[1]
+
+    in_memory_clipboard["value"] = "should not be returned"
+
+    response = client.get(
+        "/paste", json={"hostname": "test", "id": target["id"]}
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["content"] == target["content"] == "hello"
+
+
+def test_paste_specific_id_not_found(client):
+    response = client.get("/paste", json={"hostname": "test", "id": 12345})
+    assert response.status_code == 404
+    payload = response.get_json()
+    assert payload["error"] == "history entry not found"
+
+
+def test_paste_specific_id_invalid(client):
+    response = client.get("/paste", json={"hostname": "test", "id": -1})
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["error"] == "id must be positive"
+
+    response = client.get("/paste", json={"hostname": "test", "id": "abc"})
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["error"] == "id must be an integer"
+
+
+def test_history_invalid_parameters(client):
+    response = client.get("/history", json={"hostname": "test", "limit": 0})
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["error"] == "limit must be positive"
+
+    response = client.get("/history", json={"hostname": "test", "id": "oops"})
+    assert response.status_code == 400
+    payload = response.get_json()
+    assert payload["error"] == "id must be an integer"

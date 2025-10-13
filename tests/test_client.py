@@ -57,6 +57,10 @@ def test_client_includes_security_token(monkeypatch):
     assert captured["paste"]["headers"][SECURITY_TOKEN_HEADER] == "secret"
     assert SECURITY_TOKEN_HEADER not in captured["paste"]["json"]
 
+    client.paste(event_id=7)
+    assert captured["paste"]["headers"][SECURITY_TOKEN_HEADER] == "secret"
+    assert captured["paste"]["json"]["id"] == 7
+
     client.history()
     assert captured["history"]["headers"][SECURITY_TOKEN_HEADER] == "secret"
     assert "id" not in captured["history"]["json"]

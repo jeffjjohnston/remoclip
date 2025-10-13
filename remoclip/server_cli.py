@@ -52,6 +52,17 @@ def create_app(config: RemoClipConfig) -> Flask:
                 )
             )
 
+    def _parse_optional_positive_int(value: Any, field: str) -> int | None:
+        if value is None:
+            return None
+        try:
+            number = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{field} must be an integer") from exc
+        if number <= 0:
+            raise ValueError(f"{field} must be positive")
+        return number
+
     def _validate_payload(data: dict[str, Any], expect_content: bool) -> dict[str, Any]:
         if not data or "hostname" not in data:
             raise ValueError("JSON payload must include 'hostname'")
@@ -77,7 +88,16 @@ def create_app(config: RemoClipConfig) -> Flask:
         try:
             data = request.get_json(silent=True) or {}
             payload = _validate_payload(data, expect_content=False)
-            content = pyperclip.paste()
+            event_id = _parse_optional_positive_int(data.get("id"), "id")
+
+            if event_id is not None:
+                with session_scope(session_factory) as session:
+                    event = session.get(ClipboardEvent, event_id)
+                    if event is None:
+                        return jsonify({"error": "history entry not found"}), 404
+                    content = event.content
+            else:
+                content = pyperclip.paste()
             _log_event(str(payload["hostname"]), "paste", content)
             return jsonify({"content": content})
         except Exception as exc:  # pragma: no cover - defensive
@@ -89,15 +109,8 @@ def create_app(config: RemoClipConfig) -> Flask:
         try:
             data = request.get_json(silent=True) or {}
             payload = _validate_payload(data, expect_content=False)
-            limit_value = data.get("limit")
-            limit = int(limit_value) if limit_value is not None else None
-            id_value = data.get("id")
-            event_id = int(id_value) if id_value is not None else None
-
-            if limit is not None and limit <= 0:
-                raise ValueError("limit must be positive")
-            if event_id is not None and event_id <= 0:
-                raise ValueError("id must be positive")
+            limit = _parse_optional_positive_int(data.get("limit"), "limit")
+            event_id = _parse_optional_positive_int(data.get("id"), "id")
 
             with session_scope(session_factory) as session:
                 if event_id is not None:
@@ -119,7 +132,7 @@ def create_app(config: RemoClipConfig) -> Flask:
                         .filter(ClipboardEvent.action != "history")
                         .order_by(ClipboardEvent.timestamp.desc())
                     )
-                    if limit is not None and limit > 0:
+                    if limit is not None:
                         query = query.limit(limit)
                     events = [
                         {
