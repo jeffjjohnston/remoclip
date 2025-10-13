@@ -1,0 +1,12 @@
+site_name: RemoClip
+site_description: Clipboard synchronisation service and CLI documentation
+nav:
+  - Home: index.md
+  - Configuration: configuration.md
+  - Server: server.md
+  - Client: client.md
+theme:
+  name: mkdocs
+markdown_extensions:
+  - admonition
+  - tables
