@@ -22,6 +22,7 @@ server: 127.0.0.1
 port: 35612
 db: ~/.remoclip.sqlite
 security_token: null
+socket: null
 ```
 
 - `server` and `port` describe where the server listens.
@@ -29,6 +30,11 @@ security_token: null
 - `security_token` is an optional shared secret; when set, both the client and server
   send it in the `X-RemoClip-Token` HTTP header. Leave it `null` (or omit the key) to
   disable the check.
+- `socket` is an optional Unix domain socket path for the client. When provided, the
+  client defaults to communicating over that socket while the server continues to read
+  the `server` and `port` values. This allows the same configuration to be used for
+  both tools even when an SSH tunnel exposes the server as a socket (for example,
+  `ssh -R /tmp/remoclip.sock:localhost:35612 remotehost`).
 
 Pass `--config /path/to/config.yaml` to either CLI to override the default path.
 
