@@ -168,7 +168,14 @@ def create_app(config: RemoClipConfig) -> Flask:
 
             if event_id is not None:
                 with session_scope(session_factory) as session:
-                    event = session.get(ClipboardEvent, event_id)
+                    event = (
+                        session.query(ClipboardEvent)
+                        .filter(
+                            ClipboardEvent.id == event_id,
+                            ClipboardEvent.action != "history",
+                        )
+                        .one_or_none()
+                    )
                     if event is None:
                         return jsonify({"error": "history entry not found"}), 404
                     content = event.content

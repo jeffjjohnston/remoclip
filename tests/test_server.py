@@ -10,6 +10,7 @@ import pytest
 
 import remoclip.config as config_module
 from remoclip.clipboard import PrivateClipboardBackend
+from remoclip.db import ClipboardEvent, session_scope
 from remoclip.server_cli import create_app
 
 RemoClipConfig = config_module.RemoClipConfig
@@ -172,6 +173,29 @@ def test_paste_specific_id_invalid(client):
     assert response.status_code == 400
     payload = response.get_json()
     assert payload["error"] == "id must be an integer"
+
+
+def test_paste_specific_id_rejects_history_event(client, app):
+    response = client.get("/history", json={"hostname": "test"})
+    assert response.status_code == 200
+
+    session_factory = app.config["SESSION_FACTORY"]
+    with session_scope(session_factory) as session:
+        history_event_id = (
+            session.query(ClipboardEvent.id)
+            .filter(ClipboardEvent.action == "history")
+            .order_by(ClipboardEvent.id.desc())
+            .scalar()
+        )
+
+    assert history_event_id is not None
+
+    response = client.get(
+        "/paste", json={"hostname": "test", "id": history_event_id}
+    )
+    assert response.status_code == 404
+    payload = response.get_json()
+    assert payload["error"] == "history entry not found"
 
 
 def test_private_backend_seeds_from_history(tmp_path):
