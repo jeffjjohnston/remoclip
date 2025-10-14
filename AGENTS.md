@@ -12,7 +12,7 @@ this repository.
 - `docs/` holds the MkDocs content (landing page, usage guides, and API reference).
   Keep navigation up to date with `mkdocs.yaml` when you add new pages, and ensure
   examples reflect the current behaviour.
-- The package targets **Python 3.9+** and uses standard library features available in
+- The package targets **Python 3.10+** and uses standard library features available in
   that runtime.
 
 ## Development workflow
