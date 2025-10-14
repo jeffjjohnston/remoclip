@@ -65,12 +65,3 @@ jobs:
             -H "Content-Type: application/json" \
             --data '{"files": ["https://remoclip.newmatter.net/latest/"]}'
 
-      # -----------------------------------------
-      # (Optional) Deploy Worker if updated
-      # -----------------------------------------
-      - name: Publish Cloudflare Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: cf-docs-worker
-          command: publish --env production

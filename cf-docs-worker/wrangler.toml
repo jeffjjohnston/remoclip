@@ -3,7 +3,6 @@ main = "index.js"
 compatibility_date = "2025-10-01"
 
 [env.production]
-zone_id = "4997775117f565ff3f5e83da020d4cca"
 route = "remoclip.newmatter.net/*"
 r2_buckets = [
   { binding = "DOCS_BUCKET", bucket_name = "remoclip-docs" }
