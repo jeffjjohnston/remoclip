@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "mkdocs", "mkdocs-material"]
 
 [project.scripts]
 remoclip = "remoclip.client_cli:main"

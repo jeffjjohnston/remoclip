@@ -6,7 +6,7 @@ nav:
   - Server: server.md
   - Client: client.md
 theme:
-  name: mkdocs
+  name: material
 markdown_extensions:
   - admonition
   - tables
