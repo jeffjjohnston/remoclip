@@ -17,6 +17,7 @@ def test_load_config_uses_defaults_when_file_missing(tmp_path, monkeypatch):
 
     assert loaded.server == config.DEFAULT_CONFIG["server"]
     assert loaded.port == config.DEFAULT_CONFIG["port"]
+    assert loaded.use_https is False
     assert loaded.db_path == Path(config.DEFAULT_CONFIG["db"]).expanduser()
     assert loaded.security_token is None
     assert loaded.socket is None
@@ -29,6 +30,7 @@ def test_load_config_overrides_defaults(tmp_path):
             """
             server: example.com
             port: 4000
+            use_https: true
             db: ~/custom.sqlite
             security_token: secret
             socket: /tmp/remoclip.sock
@@ -40,6 +42,7 @@ def test_load_config_overrides_defaults(tmp_path):
 
     assert loaded.server == "example.com"
     assert loaded.port == 4000
+    assert loaded.use_https is True
     assert loaded.db_path == Path("~/custom.sqlite").expanduser()
     assert loaded.security_token == "secret"
     assert loaded.socket_path == Path("/tmp/remoclip.sock")

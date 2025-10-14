@@ -104,6 +104,25 @@ def test_client_without_token_uses_empty_headers(monkeypatch):
     assert session.post_calls[-1]["headers"] == {}
 
 
+def test_client_uses_https_when_configured(monkeypatch):
+    session = RecordingSession()
+    monkeypatch.setattr("remoclip.client_cli.RequestsSession", lambda: session)
+
+    config = RemoClipConfig(
+        server="secure.example.com",
+        port=8443,
+        db=Path("/tmp/db.sqlite"),
+        use_https=True,
+    )
+
+    client = RemoClipClient(config)
+
+    client.paste()
+
+    assert client.base_url == "https://secure.example.com:8443"
+    assert session.get_calls[-1]["url"] == "https://secure.example.com:8443/paste"
+
+
 def test_client_prefers_unix_socket_when_configured(monkeypatch, tmp_path):
     socket_path = tmp_path / "remoclip.sock"
     session = RecordingSession()
