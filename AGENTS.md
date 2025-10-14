@@ -9,6 +9,9 @@ this repository.
   models, Flask server factory, and client CLI helpers) using the src/ layout.
 - `tests/` exercises the public behaviours with pytest; add or update tests alongside
   any functional change.
+- `docs/` holds the MkDocs content (landing page, usage guides, and API reference).
+  Keep navigation up to date with `mkdocs.yaml` when you add new pages, and ensure
+  examples reflect the current behaviour.
 - The package targets **Python 3.9+** and uses standard library features available in
   that runtime.
 
@@ -24,7 +27,9 @@ this repository.
 3. Keep the default configuration path (`~/.remoclip.yaml`) and database location
    overridable via the existing helper functions; do not hard-code alternative paths.
 4. When you add or change CLI flags or endpoints, update the README usage examples so
-   they stay aligned with the behaviour.
+  they stay aligned with the behaviour.
+5. Review the MkDocs documentation in `docs/` for relevant updates whenever you change
+   functionality or user workflows; documentation should remain accurate and complete.
 
 ## Coding conventions
 - Keep modules fully type annotated; maintain the existing type hint style using
