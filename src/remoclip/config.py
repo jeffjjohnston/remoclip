@@ -17,6 +17,7 @@ ClipboardBackendName = Literal["system", "private"]
 DEFAULT_CONFIG: dict[str, Any] = {
     "server": "127.0.0.1",
     "port": 35612,
+    "use_https": False,
     "db": "~/.remoclip.sqlite",
     "security_token": None,
     "socket": None,
@@ -29,6 +30,7 @@ class RemoClipConfig:
     server: str
     port: int
     db: Path
+    use_https: bool = False
     security_token: str | None = None
     socket: Path | None = None
     clipboard_backend: ClipboardBackendName = "system"
@@ -65,6 +67,7 @@ def load_config(path: str | None = None) -> RemoClipConfig:
         server=str(data["server"]),
         port=int(data["port"]),
         db=Path(str(data["db"])),
+        use_https=bool(data.get("use_https")),
         security_token=(
             str(data["security_token"])
             if data.get("security_token") is not None

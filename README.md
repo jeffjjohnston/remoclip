@@ -20,6 +20,7 @@ Both tools read the same YAML configuration file. By default this file lives at 
 ```yaml
 server: 127.0.0.1
 port: 35612
+use_https: false
 db: ~/.remoclip.sqlite
 security_token: null
 socket: null
@@ -27,6 +28,8 @@ clipboard_backend: system
 ```
 
 - `server` and `port` describe where the server listens.
+- `use_https` toggles HTTPS for client requests. Set this to `true` when the
+  server is exposed over TLS so the client uses `https://` URLs.
 - `db` is the SQLite database path used for request logging.
 - `security_token` is an optional shared secret; when set, both the client and server
   send it in the `X-RemoClip-Token` HTTP header. Leave it `null` (or omit the key) to

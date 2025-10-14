@@ -139,7 +139,8 @@ class RemoClipClient:
             self.base_url = f"http+unix://{encoded_path}"
             session = UnixSocketSession(socket_path)
         else:
-            self.base_url = f"http://{config.server}:{config.port}"
+            scheme = "https" if config.use_https else "http"
+            self.base_url = f"{scheme}://{config.server}:{config.port}"
             session = RequestsSession()
         self._session = session
         self._headers = {}
