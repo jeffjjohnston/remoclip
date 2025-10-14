@@ -1,0 +1,73 @@
+# Client
+
+The `remoclip` executable provides a terminal-friendly interface for interacting
+with a running RemoClip server. It reads from standard input, writes responses to
+standard output, and surfaces errors on standard error.
+
+## Command overview
+
+```bash
+remoclip --config ~/.remoclip.yaml <command> [options]
+```
+
+The `command` argument selects the operation to perform. Short aliases are also
+available.
+
+| Command | Alias | Description |
+| ------- | ----- | ----------- |
+| `copy` | `c` | Read stdin, send the content to the server, and echo the value locally. |
+| `paste` | `p` | Retrieve the latest clipboard value (or a specific history entry) and print it to stdout. |
+| `history` | `h` | Fetch clipboard history as formatted JSON and write it to stdout. |
+
+Common options:
+
+- `--config PATH` – location of the YAML configuration file (defaults to
+  `~/.remoclip.yaml`).
+- `--limit N` – restrict the number of entries returned by `history`.
+- `--id N` – request a particular history entry for `paste` or `history`.
+
+Invalid values for `--limit` or `--id` cause the client to exit with code `2`
+and a descriptive error message.
+
+!!! tip
+    Provide positive integers for `--limit` and `--id`. The CLI validates the
+    values before sending a request so mistakes fail fast with a helpful error.
+
+## Transport selection
+
+The client automatically chooses how to talk to the server based on the loaded
+configuration:
+
+- When `socket` is set to a Unix domain socket path the client connects over that
+  socket using an HTTP-over-UDS adapter.
+- Otherwise it targets the `server` and `port` values using standard HTTP
+  requests via the `requests` library. When the configuration enables
+  `use_https`, the client automatically switches to HTTPS requests so it can
+  talk to servers behind a TLS terminator.
+
+In both cases the client includes the local machine hostname in every request.
+If `security_token` is configured the client transparently attaches it via the
+`X-RemoClip-Token` header.
+
+## Exit codes and errors
+
+Network or HTTP-level issues raise a `RequestException`. The CLI reports the
+failure and exits with status code `1` so scripts can detect the problem. Value
+validation errors exit with status code `2`. Successful operations exit with
+status code `0`.
+
+## Examples
+
+```bash
+# Copy the contents of a file to the remote clipboard
+cat notes.txt | remoclip copy
+
+# Paste the most recent remote clipboard value
+remoclip paste
+
+# Retrieve the five most recent history entries
+remoclip history --limit 5
+
+# Fetch a specific history entry by id
+remoclip paste --id 42
+```
