@@ -75,6 +75,7 @@ def create_app(config: RemoClipConfig) -> Flask:
     app.config["SESSION_FACTORY"] = session_factory
 
     logger = logging.getLogger(__name__)
+    allow_deletions = config.server.allow_deletions
 
     def _seed_clipboard_value() -> str:
         with session_scope(session_factory) as session:
@@ -137,6 +138,12 @@ def create_app(config: RemoClipConfig) -> Flask:
             raise ValueError(f"{field} must be an integer") from exc
         if number <= 0:
             raise ValueError(f"{field} must be positive")
+        return number
+
+    def _parse_required_positive_int(value: Any, field: str) -> int:
+        number = _parse_optional_positive_int(value, field)
+        if number is None:
+            raise ValueError(f"{field} must be provided")
         return number
 
     def _validate_payload(data: dict[str, Any], expect_content: bool) -> dict[str, Any]:
@@ -231,6 +238,28 @@ def create_app(config: RemoClipConfig) -> Flask:
             return jsonify({"history": events})
         except Exception as exc:  # pragma: no cover - defensive
             logging.exception("Failed to handle /history request")
+            return jsonify({"error": str(exc)}), 400
+
+    @app.delete("/history")
+    def delete_history():
+        try:
+            data = request.get_json(force=True, silent=False)
+            payload = _validate_payload(data, expect_content=False)
+            event_id = _parse_required_positive_int(payload.get("id"), "id")
+
+            if not allow_deletions:
+                return jsonify({"error": "history deletions are disabled"}), 403
+
+            with session_scope(session_factory) as session:
+                event = session.get(ClipboardEvent, event_id)
+                if event is None or event.action == "history":
+                    return jsonify({"error": "history entry not found"}), 404
+                session.delete(event)
+            return jsonify({"status": "deleted"})
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:  # pragma: no cover - defensive
+            logging.exception("Failed to handle /history delete request")
             return jsonify({"error": str(exc)}), 400
 
     return app

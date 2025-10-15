@@ -29,6 +29,7 @@ server:
     port: 35612
     db: ~/.remoclip.sqlite
     clipboard_backend: system
+    allow_deletions: false
 
 client:
     url: "http://127.0.0.1:35612"
@@ -43,6 +44,9 @@ client:
 - `server.clipboard_backend` selects how the server stores clipboard data. The default
   `system` value uses the host clipboard via `pyperclip`. Set the field to `private`
   to keep clipboard contents in-process for headless deployments.
+- `server.allow_deletions` toggles whether clients may delete clipboard history
+  entries via the API. It defaults to `false` so audit trails remain intact unless
+  explicitly permitted.
 - `client.url` controls how the client reaches the server. Switch it to an `https://`
   URL when a TLS terminator or reverse proxy handles encryption.
 - `client.socket` is an optional Unix domain socket path for the client. When provided,
@@ -70,11 +74,12 @@ survives restarts. If the configuration requests the `system` backend but `pyper
 is unavailable, the server logs a warning and falls back to the private backend so
 clipboard operations continue to work.
 
-The server exposes three JSON endpoints:
+The server exposes four JSON endpoints:
 
 - `POST /copy` – set the clipboard. Payload includes `hostname` and `content`.
 - `GET /paste` – retrieve the clipboard. Payload includes `hostname`.
 - `GET /history` – retrieve prior clipboard events. Payload includes `hostname` and optional `limit` or `id`.
+- `DELETE /history` – remove a history entry when `server.allow_deletions` is set to `true`.
 
 Each request is recorded in the configured SQLite database. When a `security_token` is
 configured, requests that omit or use an incorrect token receive `401` responses.
@@ -101,6 +106,12 @@ Fetch history as JSON, optionally limiting the number of entries or retrieving a
 ```
 remoclip history --limit 5
 remoclip history --id 42
+```
+
+Delete a specific history entry when the server allows it:
+
+```
+remoclip history --delete --id 42
 ```
 
 All client requests include the machine hostname for auditing on the server side.

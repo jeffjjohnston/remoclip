@@ -13,6 +13,7 @@ server:
     port: 35612
     db: ~/.remoclip.sqlite
     clipboard_backend: system
+    allow_deletions: false
 
 client:
     url: "http://127.0.0.1:35612"
