@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from pathlib import Path
@@ -132,6 +133,59 @@ def test_history_excludes_history_events(client):
     assert response.status_code == 200
     history = response.get_json()["history"]
     assert history[0]["action"] == "copy"
+
+
+def test_history_event_logs_request_metadata(client, app):
+    client.post("/copy", json={"hostname": "test", "content": "hello"})
+    client.post("/copy", json={"hostname": "test", "content": "world"})
+
+    session_factory = app.config["SESSION_FACTORY"]
+
+    def latest_history_event_content() -> str | None:
+        with session_scope(session_factory) as session:
+            entry = (
+                session.query(ClipboardEvent)
+                .filter(ClipboardEvent.action == "history")
+                .order_by(ClipboardEvent.id.desc())
+                .first()
+            )
+            if entry is None:
+                return None
+            return entry.content
+
+    response = client.get("/history", json={"hostname": "test"})
+    assert response.status_code == 200
+    all_events = response.get_json()["history"]
+    log_content = latest_history_event_content()
+    assert log_content is not None
+    payload = json.loads(log_content)
+    assert payload["event_ids"] == [item["id"] for item in all_events]
+    assert "limit" not in payload
+    assert "id" not in payload
+
+    response = client.get("/history", json={"hostname": "test", "limit": 1})
+    assert response.status_code == 200
+    limited_events = response.get_json()["history"]
+    log_content = latest_history_event_content()
+    assert log_content is not None
+    payload = json.loads(log_content)
+    assert payload["event_ids"] == [item["id"] for item in limited_events]
+    assert payload["limit"] == 1
+    assert "id" not in payload
+
+    target_id = all_events[-1]["id"]
+    response = client.get(
+        "/history", json={"hostname": "test", "id": target_id}
+    )
+    assert response.status_code == 200
+    specific_events = response.get_json()["history"]
+    assert [item["id"] for item in specific_events] == [target_id]
+    log_content = latest_history_event_content()
+    assert log_content is not None
+    payload = json.loads(log_content)
+    assert payload["event_ids"] == [target_id]
+    assert payload["id"] == target_id
+    assert "limit" not in payload
 
 
 def test_history_delete_requires_configuration(tmp_path):
