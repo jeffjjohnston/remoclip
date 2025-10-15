@@ -29,6 +29,7 @@ client:
 | `server.port` | integer | TCP port the server uses when `client.socket` is not configured. |
 | `server.db` | path | Location of the SQLite database used to persist clipboard events. The directory is created automatically if it does not exist. |
 | `server.clipboard_backend` | `system` or `private` | Selects how clipboard contents are stored on the server. The `system` backend uses the host clipboard via `pyperclip`. The `private` backend keeps data in memory so remoclip can run on headless hosts without clipboard access. |
+| `server.allow_deletions` | `true` or `false` | Determines if deletion requests for specific history items are allowed. |
 | `client.url` | string | Base URL the client uses for HTTP(S) requests. Switch to an `https://` URL when a reverse proxy terminates TLS in front of the remoclip server. |
 | `client.socket` | path or `null` | Path to a Unix domain socket used by the client. When provided, the client prefers this socket while the server continues to bind to `server.host`/`server.port`. Leave `null` to send requests over TCP. |
 

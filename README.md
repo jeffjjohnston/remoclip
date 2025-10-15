@@ -8,112 +8,65 @@ See the full documentation at [remoclip.newmatter.net](https://remoclip.newmatte
 
 ## Quick Start
 
-```
-pip install .
-```
-
-This provides two executables:
-
-- `remoclip_server` – runs the HTTP server that manages the clipboard.
-- `remoclip` – CLI client that interacts with a running server.
-
-## Configuration
-
-Both tools read the same YAML configuration file. By default this file lives at `~/.remoclip.yaml`:
-
-```yaml
-security_token: null
-
-server:
-    host: 127.0.0.1
-    port: 35612
-    db: ~/.remoclip.sqlite
-    clipboard_backend: system
-    allow_deletions: false
-
-client:
-    url: "http://127.0.0.1:35612"
-    socket: null
+Install with uv or pip:
+```sh
+$ uv tool install remoclip
+# alternative:
+# pip install remoclip
 ```
 
-- `security_token` is an optional shared secret; when set, both the client and server
-  send it in the `X-RemoClip-Token` HTTP header. Leave it `null` (or omit the key) to
-  disable the check.
-- `server.host` and `server.port` describe where the server listens.
-- `server.db` is the SQLite database path used for request logging.
-- `server.clipboard_backend` selects how the server stores clipboard data. The default
-  `system` value uses the host clipboard via `pyperclip`. Set the field to `private`
-  to keep clipboard contents in-process for headless deployments.
-- `server.allow_deletions` toggles whether clients may delete clipboard history
-  entries via the API. It defaults to `false` so audit trails remain intact unless
-  explicitly permitted.
-- `client.url` controls how the client reaches the server. Switch it to an `https://`
-  URL when a TLS terminator or reverse proxy handles encryption.
-- `client.socket` is an optional Unix domain socket path for the client. When provided,
-  the client defaults to communicating over that socket while the server continues to
-  use the TCP host and port. This allows the same configuration to be used for both
-  tools even when an SSH tunnel exposes the server as a socket (for example,
-  `ssh -R /tmp/remoclip.sock:localhost:35612 remotehost`).
-
-Pass `--config /path/to/config.yaml` to either CLI to override the default path.
-
-## Running the server
-
-```
-remoclip_server --config ~/.remoclip.yaml
+Create a security token (optional but **highly** recommended):
+```sh
+TOKEN=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+echo "security_token: $TOKEN" > ~/.remoclip.yaml 
 ```
 
-On startup the server prints a banner such as `INFO: Listening on http://127.0.0.1:35612`
-and then streams structured access logs to standard output. Each request line follows
-the common log format (including the remote address and HTTP version) and status codes
-are colourised so you can spot redirects, client errors, and server errors at a glance.
-
-When the server runs with the `private` clipboard backend it keeps clipboard contents in
-memory and seeds them from the most recent copy or paste event in the database so state
-survives restarts. If the configuration requests the `system` backend but `pyperclip`
-is unavailable, the server logs a warning and falls back to the private backend so
-clipboard operations continue to work.
-
-The server exposes four JSON endpoints:
-
-- `POST /copy` – set the clipboard. Payload includes `hostname` and `content`.
-- `GET /paste` – retrieve the clipboard. Payload includes `hostname`.
-- `GET /history` – retrieve prior clipboard events. Payload includes `hostname` and optional `limit` or `id`.
-- `DELETE /history` – remove a history entry when `server.allow_deletions` is set to `true`.
-
-Each request is recorded in the configured SQLite database. When a `security_token` is
-configured, requests that omit or use an incorrect token receive `401` responses.
-
-## Using the client
-
-The client reads data from standard input and emits responses to standard output.
-
-Copy local input to the remote clipboard (and echo it back):
-
-```
-echo "Hello" | remoclip copy
+Run the server:
+```sh
+$ remoclip_server
 ```
 
-Paste the remote clipboard to your terminal, optionally requesting a specific history entry:
-
-```
-remoclip paste
-remoclip paste --id 42
-```
-
-Fetch history as JSON, optionally limiting the number of entries or retrieving a specific event:
-
-```
-remoclip history --limit 5
-remoclip history --id 42
+In a new shell, access your local clipboard:
+```sh
+$ echo Hello from remoclip. | remoclip copy
+Hello from remoclip.
+$ remoclip paste
+Hello from remoclip.
 ```
 
-Delete a specific history entry when the server allows it:
-
+Connect to a remote system:
+```sh
+# first copy the config file so the remote client uses the security token
+$ scp ~/.remoclip.yaml user@myremotehost:~
+# remoclip's default port is 35612
+$ ssh -R 35612:127.0.0.1:35612 user@myremotehost
+user@myremotehost$ uv tool install remoclip
+user@myremotehost$ remoclip paste
+Hello from remoclip.
+user@myremotehost$ echo Hello from $(hostname) | remoclip copy
+Hello from myremotehost
 ```
-remoclip history --delete --id 42
+   
+Now, back on your local system, paste the contents of your clipboard somewhere. It should contain:
+```text
+Hello from myremotehost
 ```
 
-All client requests include the machine hostname for auditing on the server side.
-If the configuration provides a `security_token`, the client automatically attaches it
-using the `X-RemoClip-Token` header so the server accepts the request.
+You can also use `remoclip paste` (or `remoclip p`) and `remoclip copy` (or `remoclip c`) locally, similar to the macOS `pbcopy` and `pbpaste` commands.
+
+If you want to avoid exposing a port on the remote system, Unix domain sockets are also supported:
+
+```sh
+$ echo "Hello from my local machine." | remoclip copy
+$ ssh -R /tmp/remoclip.sock:127.0.0.1:35612 user@myremotehost
+user@myremotehost$ echo -e "\nclient:\n\tsocket: /tmp/remoclip.sock" >> ~/.remoclip.yaml
+user@myremotehost$ remoclip paste
+Hello from my local machine.
+```
+
+Unfortunately, SSH does not automatically clean up the socket file when you disconnect your session. You'll need to delete it manually before you initiate a new connection with the same socket:
+
+```sh
+$ ssh user@myremote rm /tmp/remoclip-user.sock
+$ ssh -R /tmp/remoclip-user.sock:127.0.0.1:35612 user@myremotehost
+```
