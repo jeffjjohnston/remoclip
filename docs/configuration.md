@@ -30,30 +30,11 @@ client:
 | `client.url` | string | Base URL the client uses for HTTP(S) requests. Switch to an `https://` URL when a reverse proxy terminates TLS in front of the RemoClip server. |
 | `client.socket` | path or `null` | Path to a Unix domain socket used by the client. When provided, the client prefers this socket while the server continues to bind to `server.host`/`server.port`. Leave `null` to send requests over TCP. |
 
-## Clipboard backend behaviour
-
-When the configuration requests the `system` backend but the `pyperclip`
-dependency is unavailable, the server logs a warning and falls back to the
-`private` backend. This ensures copy and paste requests continue to work even on
-minimal systems.
-
-If you explicitly select the `private` backend, clipboard contents stay within
-the RemoClip process. The most recent value is seeded from the database during
-startup so history survives server restarts.
-
 ## HTTPS support
 
-Set `client.url` to an `https://` address when the RemoClip server is exposed
-via a TLS terminator such as a reverse proxy. The bundled Flask development
-server always listens with plain HTTP, so use an external proxy (for example,
-Nginx or Caddy) if you need encrypted transport end-to-end.
+Set `client.url` to an `https://` address when the remoclip server is exposed
+via a TLS terminator such as a reverse proxy. 
 
 ## Database location
 
-The SQLite database records every `copy`, `paste`, and `history` action. Each
-record includes the hostname, action, timestamp, and the content that was
-transferred. This audit trail powers the history API and is valuable when you
-need to retrieve earlier clipboard entries.
-
-The database file defaults to `~/.remoclip.sqlite`. You can change the path to
-store data alongside other application state or to point at a shared volume.
+The SQLite database records every `copy`, `paste`, and `history` action. Each record includes the hostname, action, timestamp, and the content that was transferred. This audit trail powers the history API and is valuable when you need to retrieve earlier clipboard entries. The database file defaults to `~/.remoclip.sqlite` and is configurable.

@@ -1,8 +1,9 @@
-site_name: RemoClip
-site_description: Clipboard synchronisation service and CLI documentation
+site_name: remoclip
+site_description: Local and remote CLI access to your clipboard
 nav:
   - Home: index.md
   - Configuration: configuration.md
+  - Usage: usage.md
   - Server: server.md
   - Client: client.md
 theme:
