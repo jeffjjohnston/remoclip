@@ -4,7 +4,8 @@ Both `remoclip` (the client) and `remoclip_server` (the server) load a shared
 YAML configuration file. By default this file lives at `~/.remoclip.yaml`, but
 both CLIs accept a `--config` flag so you can supply an alternate path.
 
-```yaml
+```yaml title="~/.remoclip.yaml"
+# default values shown here
 security_token: null
 
 server:
@@ -26,8 +27,8 @@ client:
 | `server.host` | string | Hostname or IP address that the server binds to when listening for HTTP requests. |
 | `server.port` | integer | TCP port the server uses when `client.socket` is not configured. |
 | `server.db` | path | Location of the SQLite database used to persist clipboard events. The directory is created automatically if it does not exist. |
-| `server.clipboard_backend` | `system` or `private` | Selects how clipboard contents are stored on the server. The `system` backend uses the host clipboard via `pyperclip`. The `private` backend keeps data in memory so RemoClip can run on headless hosts without clipboard access. |
-| `client.url` | string | Base URL the client uses for HTTP(S) requests. Switch to an `https://` URL when a reverse proxy terminates TLS in front of the RemoClip server. |
+| `server.clipboard_backend` | `system` or `private` | Selects how clipboard contents are stored on the server. The `system` backend uses the host clipboard via `pyperclip`. The `private` backend keeps data in memory so remoclip can run on headless hosts without clipboard access. |
+| `client.url` | string | Base URL the client uses for HTTP(S) requests. Switch to an `https://` URL when a reverse proxy terminates TLS in front of the remoclip server. |
 | `client.socket` | path or `null` | Path to a Unix domain socket used by the client. When provided, the client prefers this socket while the server continues to bind to `server.host`/`server.port`. Leave `null` to send requests over TCP. |
 
 ## HTTPS support

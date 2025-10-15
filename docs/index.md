@@ -17,7 +17,7 @@ Here's a quick example:
    echo "security_token: $TOKEN" > ~/.remoclip.yaml 
    ```
 
-   3. Run the server
+   3. Run the server:
    ```sh
    $ remoclip_server
    ```
@@ -36,10 +36,11 @@ Here's a quick example:
    $ scp ~/.remoclip.yaml user@myremotehost:~
    # remoclip's default port is 35612
    $ ssh -R 35612:127.0.0.1:35612 user@myremotehost
-   user@myremotehost$ uv install remoclip
+   user@myremotehost$ uv tool install remoclip
    user@myremotehost$ remoclip paste
    Hello from remoclip.
    user@myremotehost$ echo Hello from $(hostname) | remoclip copy
+   Hello from myremotehost
    ```
    
    6. Now, back on your local system:
@@ -60,15 +61,13 @@ Hello from myremotehost
 Unfortunately, SSH does not automatically clean up the socket file when you disconnect your session. You'll need to delete it manually before you initiate a new connection with the socket:
 
 ```sh
-$ ssh user@myremote rm /tmp/remoclip.sock
-$ ssh -R /tmp/remoclip.sock:127.0.0.1:35612 user@myremotehost
+$ ssh user@myremote rm /tmp/remoclip-user.sock
+$ ssh -R /tmp/remoclip-user.sock:127.0.0.1:35612 user@myremotehost
 ```
 
 ## Documentation layout
 
-- [Configuration](configuration.md) describes the YAML settings used by both
-  CLIs.
+- [Configuration](configuration.md) describes the YAML settings used by both CLIs
 - [Usage](usage.md) describes some common setups 
 - [Server](server.md) documents the `remoclip_server` HTTP server
 - [Client](client.md) explains the `remoclip` client tool
-
