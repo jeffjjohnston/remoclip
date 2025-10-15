@@ -40,10 +40,9 @@ configuration:
 
 - When `socket` is set to a Unix domain socket path the client connects over that
   socket using an HTTP-over-UDS adapter.
-- Otherwise it targets the `server` and `port` values using standard HTTP
-  requests via the `requests` library. When the configuration enables
-  `use_https`, the client automatically switches to HTTPS requests so it can
-  talk to servers behind a TLS terminator.
+- Otherwise it targets the configured `client.url` using standard HTTP(S)
+  requests via the `requests` library. Switch the URL to `https://` when a TLS
+  terminator sits in front of the RemoClip server.
 
 In both cases the client includes the local machine hostname in every request.
 If `security_token` is configured the client transparently attaches it via the

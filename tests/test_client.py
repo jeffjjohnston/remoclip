@@ -11,7 +11,9 @@ import remoclip.config as config_module
 
 from remoclip.client_cli import RemoClipClient
 
+ClientConfig = config_module.ClientConfig
 RemoClipConfig = config_module.RemoClipConfig
+ServerConfig = config_module.ServerConfig
 SECURITY_TOKEN_HEADER = getattr(config_module, "SECURITY_TOKEN_HEADER", None)
 assert SECURITY_TOKEN_HEADER is not None
 
@@ -62,10 +64,13 @@ def test_client_includes_security_token(monkeypatch):
     monkeypatch.setattr("remoclip.client_cli.RequestsSession", lambda: session)
 
     config = RemoClipConfig(
-        server="example.com",
-        port=1234,
-        db=Path("/tmp/db.sqlite"),
         security_token="secret",
+        server=ServerConfig(
+            host="example.com",
+            port=1234,
+            db=Path("/tmp/db.sqlite"),
+        ),
+        client=ClientConfig(url="http://example.com:1234"),
     )
     client = RemoClipClient(config)
 
@@ -94,9 +99,13 @@ def test_client_without_token_uses_empty_headers(monkeypatch):
     monkeypatch.setattr("remoclip.client_cli.RequestsSession", lambda: session)
 
     config = RemoClipConfig(
-        server="example.com",
-        port=1234,
-        db=Path("/tmp/db.sqlite"),
+        security_token=None,
+        server=ServerConfig(
+            host="example.com",
+            port=1234,
+            db=Path("/tmp/db.sqlite"),
+        ),
+        client=ClientConfig(url="http://example.com:1234"),
     )
     client = RemoClipClient(config)
 
@@ -104,15 +113,18 @@ def test_client_without_token_uses_empty_headers(monkeypatch):
     assert session.post_calls[-1]["headers"] == {}
 
 
-def test_client_uses_https_when_configured(monkeypatch):
+def test_client_uses_configured_url(monkeypatch):
     session = RecordingSession()
     monkeypatch.setattr("remoclip.client_cli.RequestsSession", lambda: session)
 
     config = RemoClipConfig(
-        server="secure.example.com",
-        port=8443,
-        db=Path("/tmp/db.sqlite"),
-        use_https=True,
+        security_token=None,
+        server=ServerConfig(
+            host="secure.example.com",
+            port=8443,
+            db=Path("/tmp/db.sqlite"),
+        ),
+        client=ClientConfig(url="https://secure.example.com:8443"),
     )
 
     client = RemoClipClient(config)
@@ -140,10 +152,16 @@ def test_client_prefers_unix_socket_when_configured(monkeypatch, tmp_path):
     )
 
     config = RemoClipConfig(
-        server="example.com",
-        port=1234,
-        db=Path("/tmp/db.sqlite"),
-        socket=socket_path,
+        security_token=None,
+        server=ServerConfig(
+            host="example.com",
+            port=1234,
+            db=Path("/tmp/db.sqlite"),
+        ),
+        client=ClientConfig(
+            url="http://example.com:1234",
+            socket=socket_path,
+        ),
     )
 
     client = RemoClipClient(config)

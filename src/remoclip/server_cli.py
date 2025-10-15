@@ -71,7 +71,7 @@ def serve(app: Flask, host: str, port: int) -> None:
 
 def create_app(config: RemoClipConfig) -> Flask:
     app = Flask(__name__)
-    session_factory = create_session_factory(config.db_path)
+    session_factory = create_session_factory(config.server.db_path)
     app.config["SESSION_FACTORY"] = session_factory
 
     logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ def create_app(config: RemoClipConfig) -> Flask:
 
     def _create_clipboard_backend() -> ClipboardBackend:
         initial_value = _seed_clipboard_value()
-        if config.clipboard_backend == "system":
+        if config.server.clipboard_backend == "system":
             if is_system_clipboard_available():
                 return SystemClipboardBackend()
             warn_if_unavailable(logger, "system")
@@ -254,7 +254,7 @@ def main() -> None:
     config = load_config(args.config)
     app = create_app(config)
 
-    serve(app, config.server, config.port)
+    serve(app, config.server.host, config.server.port)
 
 
 if __name__ == "__main__":  # pragma: no cover

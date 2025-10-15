@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 import yaml
 
@@ -15,29 +15,36 @@ ClipboardBackendName = Literal["system", "private"]
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "server": "127.0.0.1",
-    "port": 35612,
-    "use_https": False,
-    "db": "~/.remoclip.sqlite",
     "security_token": None,
-    "socket": None,
-    "clipboard_backend": "system",
+    "server": {
+        "host": "127.0.0.1",
+        "port": 35612,
+        "db": "~/.remoclip.sqlite",
+        "clipboard_backend": "system",
+    },
+    "client": {
+        "url": "http://127.0.0.1:35612",
+        "socket": None,
+    },
 }
 
 
 @dataclass(frozen=True)
-class RemoClipConfig:
-    server: str
+class ServerConfig:
+    host: str
     port: int
     db: Path
-    use_https: bool = False
-    security_token: str | None = None
-    socket: Path | None = None
     clipboard_backend: ClipboardBackendName = "system"
 
     @property
     def db_path(self) -> Path:
         return self.db.expanduser()
+
+
+@dataclass(frozen=True)
+class ClientConfig:
+    url: str
+    socket: Path | None = None
 
     @property
     def socket_path(self) -> Path | None:
@@ -46,35 +53,49 @@ class RemoClipConfig:
         return self.socket.expanduser()
 
 
+@dataclass(frozen=True)
+class RemoClipConfig:
+    security_token: str | None
+    server: ServerConfig
+    client: ClientConfig
+
+
 def load_config(path: str | None = None) -> RemoClipConfig:
     """Load configuration from YAML file, filling in defaults."""
     config_path = Path(path).expanduser() if path else DEFAULT_CONFIG_PATH
-    data: dict[str, Any] = DEFAULT_CONFIG.copy()
+    data = _merge(DEFAULT_CONFIG, _load_yaml(config_path))
 
-    if config_path.exists():
-        loaded = yaml.safe_load(config_path.read_text()) or {}
-        for key in DEFAULT_CONFIG:
-            if key in loaded and loaded[key] is not None:
-                data[key] = loaded[key]
+    server_config = data["server"]
+    client_config = data["client"]
 
-    socket_value = data.get("socket")
+    server = ServerConfig(
+        host=str(server_config["host"]),
+        port=int(server_config["port"]),
+        db=Path(str(server_config["db"])),
+        clipboard_backend=_normalize_clipboard_backend(
+            server_config.get("clipboard_backend")
+        ),
+    )
+
+    socket_value = client_config.get("socket")
     if socket_value in (None, ""):
         socket_path = None
     else:
         socket_path = Path(str(socket_value))
 
-    return RemoClipConfig(
-        server=str(data["server"]),
-        port=int(data["port"]),
-        db=Path(str(data["db"])),
-        use_https=bool(data.get("use_https")),
-        security_token=(
-            str(data["security_token"])
-            if data.get("security_token") is not None
-            else None
-        ),
+    client = ClientConfig(
+        url=str(client_config["url"]),
         socket=socket_path,
-        clipboard_backend=_normalize_clipboard_backend(data.get("clipboard_backend")),
+    )
+
+    security_token = data.get("security_token")
+    if security_token is not None:
+        security_token = str(security_token)
+
+    return RemoClipConfig(
+        security_token=security_token,
+        server=server,
+        client=client,
     )
 
 
@@ -85,3 +106,40 @@ def _normalize_clipboard_backend(value: Any) -> ClipboardBackendName:
             "clipboard_backend must be either 'system' or 'private'"
         )
     return backend  # type: ignore[return-value]
+
+
+def _merge(defaults: Mapping[str, Any], overrides: Mapping[str, Any] | None) -> dict[str, Any]:
+    if overrides is None:
+        return {key: _clone(value) for key, value in defaults.items()}
+
+    merged: dict[str, Any] = {}
+    for key, default_value in defaults.items():
+        if key not in overrides or overrides[key] is None:
+            merged[key] = _clone(default_value)
+            continue
+        override_value = overrides[key]
+        if isinstance(default_value, Mapping) and isinstance(override_value, Mapping):
+            merged[key] = _merge(default_value, override_value)
+        else:
+            merged[key] = override_value
+    for key, value in overrides.items():
+        if key not in merged and value is not None:
+            merged[key] = value
+    return merged
+
+
+def _clone(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {k: _clone(v) for k, v in value.items()}
+    return value
+
+
+def _load_yaml(path: Path) -> Mapping[str, Any] | None:
+    if not path.exists():
+        return None
+    loaded = yaml.safe_load(path.read_text())
+    if loaded is None:
+        return None
+    if not isinstance(loaded, Mapping):
+        raise TypeError("Configuration file must contain a mapping at the top level")
+    return loaded
