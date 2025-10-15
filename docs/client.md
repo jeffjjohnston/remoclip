@@ -26,6 +26,7 @@ Common options:
 - `--limit N` – restrict the number of entries returned by `history`.
 - `--id N` – request a particular history entry for `paste` or `history`.
 - `--delete` – remove a specific history entry when combined with `--id`.
+- `-s`/`--strip` – remove trailing newline characters before copying (copy command only).
 
 Invalid values for `--limit` or `--id` cause the client to exit with code `2`
 and a descriptive error message.

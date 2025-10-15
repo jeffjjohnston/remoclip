@@ -250,14 +250,27 @@ def main() -> None:
         action="store_true",
         help="Delete a specific history entry by id (history command only)",
     )
+    parser.add_argument(
+        "-s",
+        "--strip",
+        action="store_true",
+        help=(
+            "Remove trailing newline characters from stdin before copying "
+            "(copy command only)"
+        ),
+    )
 
     args = parser.parse_args()
     config = load_config(args.config)
     client = RemoClipClient(config)
 
     try:
+        if args.strip and args.command not in ("copy", "c"):
+            raise ValueError("--strip can only be used with the copy command")
         if args.command in ("copy", "c"):
             content = sys.stdin.read()
+            if args.strip:
+                content = content.rstrip("\n")
             client.copy(content)
             sys.stdout.write(content)
         elif args.command in ("paste", "p"):
