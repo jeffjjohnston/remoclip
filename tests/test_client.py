@@ -33,6 +33,7 @@ class RecordingSession:
     def __init__(self) -> None:
         self.post_calls: list[dict[str, Any]] = []
         self.get_calls: list[dict[str, Any]] = []
+        self.delete_calls: list[dict[str, Any]] = []
 
     def post(
         self,
@@ -57,6 +58,17 @@ class RecordingSession:
         if url.endswith("/paste"):
             return DummyResponse({"content": "value"})
         return DummyResponse({"history": []})
+
+    def delete(
+        self,
+        url: str,
+        json: dict[str, Any],
+        headers: dict[str, str] | None = None,
+        timeout: float = 0,
+    ) -> DummyResponse:
+        payload = {"url": url, "json": json, "headers": headers or {}, "timeout": timeout}
+        self.delete_calls.append(payload)
+        return DummyResponse({"status": "deleted"})
 
 
 def test_client_includes_security_token(monkeypatch):
@@ -92,6 +104,10 @@ def test_client_includes_security_token(monkeypatch):
     client.history(event_id=5)
     assert session.get_calls[-1]["headers"][SECURITY_TOKEN_HEADER] == "secret"
     assert session.get_calls[-1]["json"]["id"] == 5
+
+    client.delete_history(8)
+    assert session.delete_calls[-1]["headers"][SECURITY_TOKEN_HEADER] == "secret"
+    assert session.delete_calls[-1]["json"]["id"] == 8
 
 
 def test_client_without_token_uses_empty_headers(monkeypatch):

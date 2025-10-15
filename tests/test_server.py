@@ -25,6 +25,7 @@ def _make_config(
     *,
     clipboard_backend: config_module.ClipboardBackendName = "private",
     security_token: str | None = None,
+    allow_deletions: bool = False,
 ) -> RemoClipConfig:
     return RemoClipConfig(
         security_token=security_token,
@@ -33,6 +34,7 @@ def _make_config(
             port=5000,
             db=tmp_path / "db.sqlite",
             clipboard_backend=clipboard_backend,
+            allow_deletions=allow_deletions,
         ),
         client=ClientConfig(url="http://127.0.0.1:5000"),
     )
@@ -130,6 +132,66 @@ def test_history_excludes_history_events(client):
     assert response.status_code == 200
     history = response.get_json()["history"]
     assert history[0]["action"] == "copy"
+
+
+def test_history_delete_requires_configuration(tmp_path):
+    config = _make_config(tmp_path)
+    application = create_app(config)
+    application.config.update(TESTING=True)
+    test_client = application.test_client()
+
+    response = test_client.delete(
+        "/history", json={"hostname": "test", "id": 1}
+    )
+    assert response.status_code == 403
+    assert response.get_json()["error"] == "history deletions are disabled"
+
+
+def test_history_delete_removes_event(tmp_path):
+    config = _make_config(tmp_path, allow_deletions=True)
+    application = create_app(config)
+    application.config.update(TESTING=True)
+    test_client = application.test_client()
+
+    test_client.post("/copy", json={"hostname": "test", "content": "hello"})
+
+    session_factory = application.config["SESSION_FACTORY"]
+    with session_scope(session_factory) as session:
+        copy_event_id = (
+            session.query(ClipboardEvent.id)
+            .filter(ClipboardEvent.action == "copy")
+            .order_by(ClipboardEvent.id.desc())
+            .scalar()
+        )
+
+    assert copy_event_id is not None
+
+    response = test_client.delete(
+        "/history", json={"hostname": "test", "id": copy_event_id}
+    )
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "deleted"
+
+    with session_scope(session_factory) as session:
+        deleted_event = session.get(ClipboardEvent, copy_event_id)
+        assert deleted_event is None
+        remaining_actions = [
+            action for (action,) in session.query(ClipboardEvent.action).all()
+        ]
+        assert remaining_actions == []
+
+
+def test_history_delete_missing_entry_returns_404(tmp_path):
+    config = _make_config(tmp_path, allow_deletions=True)
+    application = create_app(config)
+    application.config.update(TESTING=True)
+    test_client = application.test_client()
+
+    response = test_client.delete(
+        "/history", json={"hostname": "test", "id": 9999}
+    )
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "history entry not found"
 
 
 def test_security_token_required(secure_client):
