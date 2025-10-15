@@ -6,6 +6,7 @@ nav:
   - Usage: usage.md
   - Server: server.md
   - Client: client.md
+  - Release History: releases.md
 theme:
   name: material
 markdown_extensions:
