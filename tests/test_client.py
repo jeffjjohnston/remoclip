@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import io
+import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
-import sys
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import remoclip.config as config_module
+import remoclip.client_cli as client_cli
 
 from remoclip.client_cli import RemoClipClient
 
@@ -185,3 +189,69 @@ def test_client_prefers_unix_socket_when_configured(monkeypatch, tmp_path):
     assert client.base_url == f"http+unix://{quote(str(socket_path), safe='')}"
     assert client._session is session
     assert captured_path["path"] == socket_path
+
+
+def test_copy_command_preserves_newlines_by_default(monkeypatch, capsys):
+    recorded: dict[str, Any] = {}
+
+    monkeypatch.setattr(client_cli, "load_config", lambda path: object())
+
+    class DummyClient:
+        def __init__(self, config: Any) -> None:
+            recorded["config"] = config
+
+        def copy(self, content: str, timeout: float = 5.0) -> None:
+            recorded["content"] = content
+
+    monkeypatch.setattr(client_cli, "RemoClipClient", DummyClient)
+    monkeypatch.setattr(client_cli.sys, "stdin", io.StringIO("hello\n\n"))
+    monkeypatch.setattr(client_cli.sys, "argv", ["remoclip", "copy"])
+
+    client_cli.main()
+
+    captured = capsys.readouterr()
+    assert recorded["content"] == "hello\n\n"
+    assert captured.out == "hello\n\n"
+    assert captured.err == ""
+
+
+def test_copy_command_strips_newlines_when_requested(monkeypatch, capsys):
+    recorded: dict[str, Any] = {}
+
+    monkeypatch.setattr(client_cli, "load_config", lambda path: object())
+
+    class DummyClient:
+        def __init__(self, config: Any) -> None:
+            recorded["config"] = config
+
+        def copy(self, content: str, timeout: float = 5.0) -> None:
+            recorded["content"] = content
+
+    monkeypatch.setattr(client_cli, "RemoClipClient", DummyClient)
+    monkeypatch.setattr(client_cli.sys, "stdin", io.StringIO("hello\n\n"))
+    monkeypatch.setattr(client_cli.sys, "argv", ["remoclip", "copy", "--strip"])
+
+    client_cli.main()
+
+    captured = capsys.readouterr()
+    assert recorded["content"] == "hello"
+    assert captured.out == "hello"
+    assert captured.err == ""
+
+
+def test_strip_option_rejected_for_non_copy_commands(monkeypatch, capsys):
+    monkeypatch.setattr(client_cli, "load_config", lambda path: object())
+
+    class DummyClient:
+        def __init__(self, config: Any) -> None:
+            self.config = config
+
+    monkeypatch.setattr(client_cli, "RemoClipClient", DummyClient)
+    monkeypatch.setattr(client_cli.sys, "argv", ["remoclip", "paste", "--strip"])
+
+    with pytest.raises(SystemExit) as excinfo:
+        client_cli.main()
+
+    assert excinfo.value.code == 2
+    captured = capsys.readouterr()
+    assert "--strip can only be used with the copy command" in captured.err

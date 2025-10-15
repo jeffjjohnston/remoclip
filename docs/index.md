@@ -36,6 +36,9 @@ $ remoclip paste
 Hello from remoclip.
 ```
 
+Add `--strip` (or `-s`) to `remoclip copy` when you need to remove trailing newline
+characters from the piped input before it reaches the clipboard.
+
 Connect to a remote system:
 ```sh
 # first copy the config file so the remote client uses the security token
