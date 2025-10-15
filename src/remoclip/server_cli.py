@@ -234,7 +234,18 @@ def create_app(config: RemoClipConfig) -> Flask:
                         }
                         for item in query.all()
                     ]
-            _log_event(str(payload["hostname"]), "history", json.dumps(events))
+            log_payload: dict[str, Any] = {
+                "event_ids": [item["id"] for item in events],
+            }
+            if limit is not None:
+                log_payload["limit"] = limit
+            if event_id is not None:
+                log_payload["id"] = event_id
+            _log_event(
+                str(payload["hostname"]),
+                "history",
+                json.dumps(log_payload),
+            )
             return jsonify({"history": events})
         except Exception as exc:  # pragma: no cover - defensive
             logging.exception("Failed to handle /history request")
