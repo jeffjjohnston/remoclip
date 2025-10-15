@@ -133,14 +133,13 @@ class UnixSocketSession:
 class RemoClipClient:
     def __init__(self, config: RemoClipConfig):
         self.config = config
-        socket_path = config.socket_path
+        socket_path = config.client.socket_path
         if socket_path is not None:
             encoded_path = quote(str(socket_path), safe="")
             self.base_url = f"http+unix://{encoded_path}"
             session = UnixSocketSession(socket_path)
         else:
-            scheme = "https" if config.use_https else "http"
-            self.base_url = f"{scheme}://{config.server}:{config.port}"
+            self.base_url = config.client.url.rstrip("/")
             session = RequestsSession()
         self._session = session
         self._headers = {}

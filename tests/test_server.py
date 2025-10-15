@@ -13,19 +13,34 @@ from remoclip.clipboard import PrivateClipboardBackend
 from remoclip.db import ClipboardEvent, session_scope
 from remoclip.server_cli import create_app
 
+ClientConfig = config_module.ClientConfig
 RemoClipConfig = config_module.RemoClipConfig
+ServerConfig = config_module.ServerConfig
 SECURITY_TOKEN_HEADER = getattr(config_module, "SECURITY_TOKEN_HEADER", None)
 assert SECURITY_TOKEN_HEADER is not None
 
 
+def _make_config(
+    tmp_path: Path,
+    *,
+    clipboard_backend: config_module.ClipboardBackendName = "private",
+    security_token: str | None = None,
+) -> RemoClipConfig:
+    return RemoClipConfig(
+        security_token=security_token,
+        server=ServerConfig(
+            host="127.0.0.1",
+            port=5000,
+            db=tmp_path / "db.sqlite",
+            clipboard_backend=clipboard_backend,
+        ),
+        client=ClientConfig(url="http://127.0.0.1:5000"),
+    )
+
+
 @pytest.fixture
 def app(tmp_path):
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        clipboard_backend="private",
-    )
+    config = _make_config(tmp_path)
     application = create_app(config)
     application.config.update(TESTING=True)
     return application
@@ -45,13 +60,7 @@ def clipboard_backend(app):
 
 @pytest.fixture
 def secure_client(tmp_path):
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        security_token="shh",
-        clipboard_backend="private",
-    )
+    config = _make_config(tmp_path, security_token="shh")
     application = create_app(config)
     application.config.update(TESTING=True)
     return application.test_client()
@@ -199,12 +208,7 @@ def test_paste_specific_id_rejects_history_event(client, app):
 
 
 def test_private_backend_seeds_from_history(tmp_path):
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        clipboard_backend="private",
-    )
+    config = _make_config(tmp_path)
     first_app = create_app(config)
     first_app.config.update(TESTING=True)
     first_client = first_app.test_client()
@@ -220,12 +224,7 @@ def test_system_backend_falls_back_when_unavailable(tmp_path, monkeypatch, caplo
     monkeypatch.setattr("remoclip.clipboard.pyperclip", None, raising=False)
     caplog.set_level(logging.WARNING)
 
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        clipboard_backend="system",
-    )
+    config = _make_config(tmp_path, clipboard_backend="system")
     app = create_app(config)
 
     backend = app.config.get("CLIPBOARD_BACKEND")

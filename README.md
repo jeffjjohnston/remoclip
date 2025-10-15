@@ -18,30 +18,34 @@ This provides two executables:
 Both tools read the same YAML configuration file. By default this file lives at `~/.remoclip.yaml`:
 
 ```yaml
-server: 127.0.0.1
-port: 35612
-use_https: false
-db: ~/.remoclip.sqlite
 security_token: null
-socket: null
-clipboard_backend: system
+
+server:
+    host: 127.0.0.1
+    port: 35612
+    db: ~/.remoclip.sqlite
+    clipboard_backend: system
+
+client:
+    url: "http://127.0.0.1:35612"
+    socket: null
 ```
 
-- `server` and `port` describe where the server listens.
-- `use_https` toggles HTTPS for client requests. Set this to `true` when the
-  server is exposed over TLS so the client uses `https://` URLs.
-- `db` is the SQLite database path used for request logging.
 - `security_token` is an optional shared secret; when set, both the client and server
   send it in the `X-RemoClip-Token` HTTP header. Leave it `null` (or omit the key) to
   disable the check.
-- `socket` is an optional Unix domain socket path for the client. When provided, the
-  client defaults to communicating over that socket while the server continues to read
-  the `server` and `port` values. This allows the same configuration to be used for
-  both tools even when an SSH tunnel exposes the server as a socket (for example,
-  `ssh -R /tmp/remoclip.sock:localhost:35612 remotehost`).
-- `clipboard_backend` selects how the server stores clipboard data. The default
+- `server.host` and `server.port` describe where the server listens.
+- `server.db` is the SQLite database path used for request logging.
+- `server.clipboard_backend` selects how the server stores clipboard data. The default
   `system` value uses the host clipboard via `pyperclip`. Set the field to `private`
   to keep clipboard contents in-process for headless deployments.
+- `client.url` controls how the client reaches the server. Switch it to an `https://`
+  URL when a TLS terminator or reverse proxy handles encryption.
+- `client.socket` is an optional Unix domain socket path for the client. When provided,
+  the client defaults to communicating over that socket while the server continues to
+  use the TCP host and port. This allows the same configuration to be used for both
+  tools even when an SSH tunnel exposes the server as a socket (for example,
+  `ssh -R /tmp/remoclip.sock:localhost:35612 remotehost`).
 
 Pass `--config /path/to/config.yaml` to either CLI to override the default path.
 
