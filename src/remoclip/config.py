@@ -21,6 +21,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "port": 35612,
         "db": "~/.remoclip.sqlite",
         "clipboard_backend": "system",
+        "allow_deletions": False,
     },
     "client": {
         "url": "http://127.0.0.1:35612",
@@ -35,6 +36,7 @@ class ServerConfig:
     port: int
     db: Path
     clipboard_backend: ClipboardBackendName = "system"
+    allow_deletions: bool = False
 
     @property
     def db_path(self) -> Path:
@@ -75,6 +77,7 @@ def load_config(path: str | None = None) -> RemoClipConfig:
         clipboard_backend=_normalize_clipboard_backend(
             server_config.get("clipboard_backend")
         ),
+        allow_deletions=_normalize_allow_deletions(server_config.get("allow_deletions")),
     )
 
     socket_value = client_config.get("socket")
@@ -106,6 +109,14 @@ def _normalize_clipboard_backend(value: Any) -> ClipboardBackendName:
             "clipboard_backend must be either 'system' or 'private'"
         )
     return backend  # type: ignore[return-value]
+
+
+def _normalize_allow_deletions(value: Any | None) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    raise TypeError("allow_deletions must be a boolean")
 
 
 def _merge(defaults: Mapping[str, Any], overrides: Mapping[str, Any] | None) -> dict[str, Any]:

@@ -25,6 +25,7 @@ Common options:
   `~/.remoclip.yaml`).
 - `--limit N` – restrict the number of entries returned by `history`.
 - `--id N` – request a particular history entry for `paste` or `history`.
+- `--delete` – remove a specific history entry when combined with `--id`.
 
 Invalid values for `--limit` or `--id` cause the client to exit with code `2`
 and a descriptive error message.
@@ -69,4 +70,7 @@ remoclip history --limit 5
 
 # Fetch a specific history entry by id
 remoclip paste --id 42
+
+# Delete a specific history entry (when the server allows deletions)
+remoclip history --delete --id 42
 ```
