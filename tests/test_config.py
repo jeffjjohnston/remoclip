@@ -24,6 +24,7 @@ def test_load_config_uses_defaults_when_file_missing(tmp_path, monkeypatch):
     assert loaded.server.clipboard_backend == config.DEFAULT_CONFIG["server"][
         "clipboard_backend"
     ]
+    assert loaded.server.allow_deletions is False
     assert loaded.client.url == config.DEFAULT_CONFIG["client"]["url"]
     assert loaded.client.socket is None
 
@@ -39,6 +40,7 @@ def test_load_config_overrides_defaults(tmp_path):
                 port: 4000
                 db: ~/custom.sqlite
                 clipboard_backend: private
+                allow_deletions: true
             client:
                 url: https://example.com:4000
                 socket: /tmp/remoclip.sock
@@ -53,5 +55,6 @@ def test_load_config_overrides_defaults(tmp_path):
     assert loaded.server.port == 4000
     assert loaded.server.db_path == Path("~/custom.sqlite").expanduser()
     assert loaded.server.clipboard_backend == "private"
+    assert loaded.server.allow_deletions is True
     assert loaded.client.url == "https://example.com:4000"
     assert loaded.client.socket_path == Path("/tmp/remoclip.sock")

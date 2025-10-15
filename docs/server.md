@@ -102,3 +102,21 @@ Responses look like:
 
 Every call stores a `history` event so you can audit when clients request
 past entries.
+
+### `DELETE /history`
+
+Remove a clipboard history entry. Requests must include the hostname and the
+`id` of the event to delete:
+
+```json
+{
+  "hostname": "bob",
+  "id": 42
+}
+```
+
+The endpoint returns a `{ "status": "deleted" }` response when successful.
+Deletions are only permitted when `server.allow_deletions` is set to `true` in
+the configuration file. Unlike other endpoints, the server does **not** record
+a database event for successful deletions so audit trails do not gain extra
+noise.
