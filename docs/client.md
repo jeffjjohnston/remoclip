@@ -1,7 +1,7 @@
 # Client
 
 The `remoclip` executable provides a terminal-friendly interface for interacting
-with a running RemoClip server. It reads from standard input, writes responses to
+with a running `remoclip_server`. It reads from standard input, writes responses to
 standard output, and surfaces errors on standard error.
 
 ## Command overview
@@ -36,14 +36,14 @@ and a descriptive error message.
 
 ## Transport selection
 
-The client automatically chooses how to talk to the server based on the loaded
+The client chooses how to talk to the server based on the loaded
 configuration:
 
 - When `socket` is set to a Unix domain socket path the client connects over that
   socket using an HTTP-over-UDS adapter.
 - Otherwise it targets the configured `client.url` using standard HTTP(S)
   requests via the `requests` library. Switch the URL to `https://` when a TLS
-  terminator sits in front of the RemoClip server.
+  terminator sits in front of the remoclip server.
 
 In both cases the client includes the local machine hostname in every request.
 If `security_token` is configured the client transparently attaches it via the
@@ -58,19 +58,81 @@ status code `0`.
 
 ## Examples
 
-```bash
-# Copy the contents of a file to the remote clipboard
-cat notes.txt | remoclip copy
-
-# Paste the most recent remote clipboard value
-remoclip paste
-
-# Retrieve the five most recent history entries
-remoclip history --limit 5
-
-# Fetch a specific history entry by id
-remoclip paste --id 42
-
-# Delete a specific history entry (when the server allows deletions)
-remoclip history --delete --id 42
+```text title="notes.txt"
+Aloha!
 ```
+
+Copy the contents of a file to the remote clipboard (and echo it back):
+
+```bash
+$ cat notes.txt | remoclip copy
+Aloha!
+```
+
+Paste the most recent remote clipboard value:
+
+```bash
+$ remoclip paste
+Aloha!
+```
+
+Retrieve the last two history entries as JSON:
+
+```bash
+$ remoclip history --limit 2
+```
+
+```json
+{
+  "history": [
+    {
+      "action": "paste",
+      "content": "Aloha!\n",
+      "hostname": "example-host",
+      "id": 2,
+      "timestamp": "2025-10-15T17:07:52.467966Z"
+    },
+    {
+      "action": "copy",
+      "content": "Aloha!\n",
+      "hostname": "example-host",
+      "id": 1,
+      "timestamp": "2025-10-15T17:07:38.963020Z"
+    }
+  ]
+}
+```
+
+Retrieve a single history entry as JSON:
+
+```bash
+$ remoclip history --id 2
+```
+
+```json
+{
+  "history": [
+    {
+      "action": "paste",
+      "content": "Aloha!\n",
+      "hostname": "example-host",
+      "id": 2,
+      "timestamp": "2025-10-15T17:07:52.467966Z"
+    }
+  ]
+}
+```
+
+Paste the contents of a previous history entry:
+
+```bash
+$ echo "Hello!" | remoclip copy
+Hello!
+$ remoclip paste
+Hello!
+$ remoclip paste --id 2
+Aloha!
+```
+
+As `remoclip` reads and writes from standard in and standard out, it can be used with pipes to avoid a lot of manual copying and pasting. 
+
