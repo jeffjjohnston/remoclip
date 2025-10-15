@@ -118,5 +118,4 @@ Remove a clipboard history entry. Requests must include the hostname and the
 The endpoint returns a `{ "status": "deleted" }` response when successful.
 Deletions are only permitted when `server.allow_deletions` is set to `true` in
 the configuration file. Unlike other endpoints, the server does **not** record
-a database event for successful deletions so audit trails do not gain extra
-noise.
+a database event for successful deletions.

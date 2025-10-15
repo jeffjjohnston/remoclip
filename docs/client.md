@@ -56,7 +56,7 @@ failure and exits with status code `1` so scripts can detect the problem. Value
 validation errors exit with status code `2`. Successful operations exit with
 status code `0`.
 
-## Examples
+## Basic examples
 
 ```text title="notes.txt"
 Aloha!
@@ -134,5 +134,24 @@ $ remoclip paste --id 2
 Aloha!
 ```
 
-As `remoclip` reads and writes from standard in and standard out, it can be used with pipes to avoid a lot of manual copying and pasting. 
+If you copy something sensitive to the clipboard and want to delete it from the server's database, use the `--delete` option:
+
+```bash
+$ remoclip history --delete --id 2
+```
+
+This requires that the server's configuration item `server.allow_deletions` be set to `true`.
+
+## Other examples
+
+As `remoclip` reads and writes from standard in and standard out, it can be used with pipes to avoid a lot of manual copying and pasting from your terminal. 
+
+Pipe the output of any command to `remoclip c` so you can immediately paste it somewhere else (or directly back into the terminal):
+
+```bash
+user@remoteserver$ grep draft files.txt | remoclip c
+dev_notes_Q4_draft.md
+```
+
+Now you can use your operating system's paste command to retrieve `dev_notes_Q4_draft.md` back into the terminal. Note that it has a trailing newline character, as that is the exact output from grep.
 

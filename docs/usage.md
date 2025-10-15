@@ -4,7 +4,7 @@ following examples highlight common setups.
 
 ## SSH forwarding
 
-When accessing a remote server over SSH you can expose the `remoclip_server` in two ways:
+When accessing a remote server over SSH you can expose your local `remoclip_server` in two ways:
 
    - **Local port forwarding** – Map a remote port to the server's port. This is a straightforward option when you control both ends and the port is not already occupied. This example uses the default configuration:
    ```bash
@@ -25,10 +25,9 @@ When accessing a remote server over SSH you can expose the `remoclip_server` in 
        socket: /tmp/remoclip-alice.sock
    ```
 
+## Cluster environments
 
-## Challenging cluster environments
-
-High performance computing clusters generally require you to connect to a head node via SSH and then open an interactive session on a compute node. In these situations, local port forwarding beyond the head node stops working, as compute nodes are often not directly reachable from your workstation. A possible alternative is to launch a temporary [cloudflared](https://github.com/cloudflare/cloudflared) tunnel on your workstation. The tunnel can publish the `remoclip_server` localhost URL over a public HTTPS endpoint. When you take this approach it is crucial to set and use the `security_token` so only authorised clients can access your clipboard data. For example:
+High performance computing clusters generally require you to connect to a head node via SSH and then open an interactive session on a compute node. In these situations, local port forwarding beyond the head node is often not possible, as either the compute nodes are not directly reachable from your workstation, or the cluster's job management tools don't allow additional port forward. A possible alternative is to launch a temporary [cloudflared](https://github.com/cloudflare/cloudflared) tunnel on your workstation. The tunnel can publish the `remoclip_server` localhost URL over a public HTTPS endpoint. When you take this approach it is crucial to set and use the `security_token` so only authorised clients can access your clipboard data. For example:
 
 ```bash
 cloudflared tunnel --url http://127.0.0.1:35612
