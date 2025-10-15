@@ -2,6 +2,8 @@
 
 `remoclip` (**remo**te **clip**board) is a small tool for providing copy and paste clipboard functionality in the CLI - with a special emphasis on allowing access to your local machine's clipboard when connected to remote systems. The package provides two CLI scripts: `remoclip_server` and `remoclip`.
 
+`remoclip` relies on the [`pyperclip`](https://github.com/asweigart/pyperclip) package to interface with the local clipboard on Linux, Mac, and Windows.
+
 ## Documentation
 
 See the full documentation at [remoclip.newmatter.net](https://remoclip.newmatter.net).
@@ -52,7 +54,7 @@ Now, back on your local system, paste the contents of your clipboard somewhere. 
 Hello from myremotehost
 ```
 
-You can also use `remoclip paste` (or `remoclip p`) and `remoclip copy` (or `remoclip c`) locally, similar to the macOS `pbcopy` and `pbpaste` commands.
+You can also use `remoclip paste` (or `remoclip p`) and `remoclip copy` (or `remoclip c`) locally, similar to the macOS `pbcopy` and `pbpaste` commands, and they will manipulate the local clipboard as expected (via interactions with the server).
 
 If you want to avoid exposing a port on the remote system, Unix domain sockets are also supported:
 

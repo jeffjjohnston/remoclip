@@ -7,8 +7,15 @@ nav:
   - Server: server.md
   - Client: client.md
   - Release History: releases.md
+
 theme:
   name: material
+  features:
+    - navigation.instant  # optional, for faster reloads
+
+repo_url: https://github.com/jeffjjohnston/remoclip
+repo_name: jeffjjohnston/remoclip
+
 markdown_extensions:
   - admonition
   - tables

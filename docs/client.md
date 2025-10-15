@@ -62,14 +62,14 @@ status code `0`.
 Aloha!
 ```
 
-Copy the contents of a file to the remote clipboard (and echo it back):
+Copy the contents of a file to the server's clipboard (and echo it back):
 
 ```bash
 $ cat notes.txt | remoclip copy
 Aloha!
 ```
 
-Paste the most recent remote clipboard value:
+Paste the most recent clipboard value from the server:
 
 ```bash
 $ remoclip paste
