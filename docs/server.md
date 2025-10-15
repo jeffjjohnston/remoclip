@@ -42,6 +42,61 @@ an `X-RemoClip-Token` header with the matching value. Requests that omit the
 header or provide the wrong token return an HTTP `401` response with a JSON error
 message. Leave the configuration entry `null` to disable token checks.
 
+## Usage scenarios
+
+RemoClip is flexible enough to support a range of deployment patterns. The
+following examples highlight common setups and the trade-offs to keep in mind.
+
+### SSH forwarding options
+
+When accessing a remote server over SSH you can expose the RemoClip HTTP
+listener in two ways:
+
+- **Local port forwarding** – Map the remote port to a localhost port on your
+  workstation. This is a straightforward option when you control both ends and
+  the port is not already occupied. Example:
+
+  ```bash
+  ssh -L 35612:127.0.0.1:35612 alice@devbox
+  # RemoClip becomes reachable at http://127.0.0.1:35612 locally
+  ```
+
+- **Unix domain socket forwarding** – Request that SSH forward a remote socket
+  path to a local port. This SSH feature lets you avoid colliding with other
+  users who may also be running RemoClip instances on the same machine, because
+  each user can bind to a dedicated socket file instead of competing for numbered
+  ports. Example:
+
+  ```bash
+  ssh -L 35612:/tmp/remoclip-alice.sock alice@devbox
+  # Remote socket /tmp/remoclip-alice.sock is exposed on localhost:35612
+  ```
+
+### Challenging cluster environments
+
+High performance computing clusters sometimes require you to connect to a head
+node via SSH and then open an interactive session on a compute node. In these
+situations local port forwarding becomes cumbersome, because the final server is
+no longer directly reachable from your workstation. A reliable alternative is to
+launch a temporary [cloudflared](https://github.com/cloudflare/cloudflared)
+tunnel on the machine that runs RemoClip. The tunnel should run alongside the
+server and will publish it over a public HTTPS URL that any host can reach. When
+you take this approach it is crucial to set and use the `security_token` so only
+authorised clients can reach your clipboard data. For example:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:35612
+# Outputs a https://... URL that forwards to your RemoClip server
+```
+
+### Headless servers
+
+On single-purpose or headless servers the private clipboard backend pairs well
+with RemoClip. Run the server with `clipboard_backend: private` to keep data in
+process memory without depending on a GUI clipboard implementation. Combine this
+with SSH forwarding or a tunnel, as described above, to access the clipboard from
+your main workstation.
+
 ## HTTP endpoints
 
 All endpoints accept and return JSON payloads. The `hostname` field is required
