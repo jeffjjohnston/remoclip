@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "remoclip"
-version = "0.1.0"
+version = "1.0.0"
 description = "Remote clipboard server and client CLI tools."
 readme = "README.md"
 license = "MIT"

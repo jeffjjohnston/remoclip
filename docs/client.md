@@ -154,5 +154,48 @@ user@remoteserver$ grep draft files.txt | remoclip c
 dev_notes_Q4_draft.md
 ```
 
-Now you can use your operating system's paste command to retrieve `dev_notes_Q4_draft.md` back into the terminal. Note that it has a trailing newline character, as that is the exact output from grep.
+Now you can use your operating system's paste command to retrieve `dev_notes_Q4_draft.md` back into the terminal. Note that it has a trailing newline character, as that is the exact output from grep. You can see this via the `remoclip history` command:
 
+```bash
+$ remoclip history --limit 1
+```
+
+```json
+{
+  "history": [
+    {
+      "action": "copy",
+      "content": "dev_notes_Q4_draft.md\n",
+      "hostname": "remoteserver",
+      "id": 19,
+      "timestamp": "2025-10-15T21:05:27.083736Z"
+    }
+  ]
+}
+```
+
+You might not want trailing newlines in all situations. If you are planning to immediately paste the value back into your terminal, for example, the newline will trigger command execution.
+
+To suppress trailing newlines, use the `--strip` or `-s` option when copying. Depending on your shell, this might cause your shell prompt to appear immediately following the output instead of on its own line. Add an extra `&& echo` to get a newline added while keeping the clipboard content free of trailing newlines:
+
+```bash
+user@remoteserver$ grep draft files.txt | remoclip c -s && echo
+dev_notes_Q4_draft.md
+user@remoteserver$ remoclip history --limit 1
+```
+
+```json
+{
+  "history": [
+    {
+      "action": "copy",
+      "content": "dev_notes_Q4_draft.md",
+      "hostname": "remoteserver",
+      "id": 21,
+      "timestamp": "2025-10-15T21:06:58.067928Z"
+    }
+  ]
+}
+```
+
+Notice the lack of a trailing `\n` in the clipboard's content.
