@@ -1,46 +1,85 @@
-# RemoClip Documentation
+# remoclip
 
-RemoClip synchronises clipboard contents between machines using a small HTTP
-service and a terminal client. This documentation is organised for [MkDocs],
-so each page in the `docs/` directory becomes part of the site navigation.
+`remoclip` (**remo**te **clip**board) is a small tool for providing copy and paste clipboard functionality in the CLI - with a special emphasis on allowing access to your local machine's clipboard when connected to remote systems. The package provides two CLI scripts: `remoclip_server` and `remoclip`.
 
-## Features
+`remoclip` relies on the [`pyperclip`](https://github.com/asweigart/pyperclip) package to interface with the local clipboard on Linux, Mac, and Windows.
 
-- **Clipboard synchronisation:** copy text from one machine and paste it from
-  another via the RemoClip HTTP API.
-- **Shared configuration:** both the server and client load settings from the
-  same YAML file, making it easy to keep hosts aligned.
-- **History tracking:** every clipboard interaction is written to a SQLite
-  database so you can review or retrieve past entries.
-- **Flexible transport:** communicate over TCP or a Unix domain socket, making
-  RemoClip a good fit for local, remote, or tunnelled workflows.
-- **Optional security token:** configure a shared secret to require callers to
-  present an `X-RemoClip-Token` header before requests are accepted.
+!!! warning
+    **Please pay attention to these warnings in the documentation. Allowing remote access to your local machine's clipboard is dangerous if not properly secured. Use the `security_token` feature and keep its value secret.**
 
-## Project layout
 
-- [`configuration`](configuration.md) describes the YAML settings used by both
-  CLIs.
-- [`server`](server.md) documents the Flask application and HTTP endpoints.
-- [`client`](client.md) explains the terminal interface that drives the server.
+## Quick Start
 
-## Quick start
+Install with uv or pip:
+```sh
+$ uv tool install remoclip
+# alternative:
+# pip install remoclip
+```
 
-1. Install the project in an isolated environment:
-   ```bash
-   uv sync  # or: pip install -e .[test]
-   ```
-2. (Optional) Create `~/.remoclip.yaml` to override the built-in defaults. The
-   [`configuration`](configuration.md) page documents every available option so
-   you can tailor connectivity, persistence, and security to your environment.
-3. Start the server:
-   ```bash
-   remoclip_server --config ~/.remoclip.yaml
-   ```
-4. Interact with the clipboard from another terminal:
-   ```bash
-   echo "Hello" | remoclip copy
-   remoclip paste
-   ```
+Create a security token (optional but **highly** recommended):
+```sh
+TOKEN=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+echo "security_token: $TOKEN" > ~/.remoclip.yaml 
+```
 
-[MkDocs]: https://www.mkdocs.org/
+Run the server:
+```sh
+$ remoclip_server
+```
+
+In a new shell, access your local clipboard:
+```sh
+$ echo Hello from remoclip. | remoclip copy
+Hello from remoclip.
+$ remoclip paste
+Hello from remoclip.
+```
+
+Add `--strip` (or `-s`) to `remoclip copy` when you need to remove trailing newline
+characters from the piped input before it reaches the clipboard.
+
+Connect to a remote system:
+```sh
+# first copy the config file so the remote client uses the security token
+$ scp ~/.remoclip.yaml user@myremotehost:~
+# remoclip's default port is 35612
+$ ssh -R 35612:127.0.0.1:35612 user@myremotehost
+user@myremotehost$ uv tool install remoclip
+user@myremotehost$ remoclip paste
+Hello from remoclip.
+user@myremotehost$ echo Hello from $(hostname) | remoclip copy
+Hello from myremotehost
+```
+   
+Now, back on your local system, paste the contents of your clipboard somewhere. It should contain:
+```text
+Hello from myremotehost
+```
+
+You can also use `remoclip paste` (or `remoclip p`) and `remoclip copy` (or `remoclip c`) locally, similar to the macOS `pbcopy` and `pbpaste` commands.
+
+If you want to avoid exposing a port on the remote system, Unix domain sockets are also supported:
+
+```sh
+$ echo "Hello from my local machine." | remoclip copy
+$ ssh -R /tmp/remoclip.sock:127.0.0.1:35612 user@myremotehost
+user@myremotehost$ echo -e "\nclient:\n\tsocket: /tmp/remoclip.sock" >> ~/.remoclip.yaml
+user@myremotehost$ remoclip paste
+Hello from my local machine.
+```
+
+Unfortunately, SSH does not automatically clean up the socket file when you disconnect your session. You'll need to delete it manually before you initiate a new connection with the same socket:
+
+```sh
+$ ssh user@myremote rm /tmp/remoclip-user.sock
+$ ssh -R /tmp/remoclip-user.sock:127.0.0.1:35612 user@myremotehost
+```
+
+## Documentation layout
+
+- [Configuration](configuration.md) describes the YAML settings used by both CLIs
+- [Usage](usage.md) describes some common setups 
+- [Server](server.md) documents the `remoclip_server` HTTP server
+- [Client](client.md) explains the `remoclip` client tool
+- [Release History](releases.md) lists each released version

@@ -1,8 +1,6 @@
 # Server
 
-The `remoclip_server` entry point runs a Flask application that exposes a small
-HTTP API for clipboard operations. This page describes how to run the server,
-what each endpoint does, and how logging and persistence work.
+The `remoclip_server` provides a small HTTP API for clipboard operations. This page describes how to run the server, what each endpoint does, and how logging and persistence work.
 
 ## Starting the server
 
@@ -19,28 +17,25 @@ INFO: Listening on http://127.0.0.1:35612
 ```
 
 Access logs are streamed to standard output using a structured format that
-includes the remote address, HTTP method, path, and response status. This makes
-it easy to spot failing requests in real time.
+includes the remote address, HTTP method, path, and response status.
 
 ## Clipboard backends
 
 The server initialises a clipboard backend when it starts:
 
 - **System backend** – integrates with the host clipboard via `pyperclip`. This
-  is selected when `clipboard_backend: system` and `pyperclip` is available.
-- **Private backend** – stores clipboard contents in memory. The server falls
-  back to this backend automatically when the system clipboard is unavailable
-  or when `clipboard_backend: private` is set.
+  is selected when the configuration specifies `server.clipboard_backend: system`.
+- **Private backend** – stores clipboard contents in memory when `clipboard_backend: private` is set. This can be useful when you run the server on a headless system with no GUI-provided clipboard.
 
-Regardless of the backend, the service seeds the initial clipboard value from
+With the prviate backend, the service seeds the initial clipboard value from
 the most recent event stored in the SQLite database so state survives restarts.
 
 ## Security token enforcement
 
-When `security_token` is configured the server requires every request to include
-an `X-RemoClip-Token` header with the matching value. Requests that omit the
-header or provide the wrong token return an HTTP `401` response with a JSON error
-message. Leave the configuration entry `null` to disable token checks.
+When `security_token` is configured the server requires every request to include an `X-RemoClip-Token` header with the matching value. Requests that omit the header or provide the wrong token return an HTTP `401` response with a JSON error message. Leave the configuration entry `null` to disable token checks.
+
+It is highly recommended that you provide a security token, especially if you are using port forwarding over SSH. As the forwarded port is exposed on the remote system's localhost interface, other users on the system can potentially query the API to read and write your clipboard data. The security token prevents this by rejecting API requests without the correct token value.
+
 
 ## HTTP endpoints
 
@@ -107,3 +102,20 @@ Responses look like:
 
 Every call stores a `history` event so you can audit when clients request
 past entries.
+
+### `DELETE /history`
+
+Remove a clipboard history entry. Requests must include the hostname and the
+`id` of the event to delete:
+
+```json
+{
+  "hostname": "bob",
+  "id": 42
+}
+```
+
+The endpoint returns a `{ "status": "deleted" }` response when successful.
+Deletions are only permitted when `server.allow_deletions` is set to `true` in
+the configuration file. Unlike other endpoints, the server does **not** record
+a database event for successful deletions.

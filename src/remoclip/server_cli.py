@@ -71,10 +71,11 @@ def serve(app: Flask, host: str, port: int) -> None:
 
 def create_app(config: RemoClipConfig) -> Flask:
     app = Flask(__name__)
-    session_factory = create_session_factory(config.db_path)
+    session_factory = create_session_factory(config.server.db_path)
     app.config["SESSION_FACTORY"] = session_factory
 
     logger = logging.getLogger(__name__)
+    allow_deletions = config.server.allow_deletions
 
     def _seed_clipboard_value() -> str:
         with session_scope(session_factory) as session:
@@ -90,7 +91,7 @@ def create_app(config: RemoClipConfig) -> Flask:
 
     def _create_clipboard_backend() -> ClipboardBackend:
         initial_value = _seed_clipboard_value()
-        if config.clipboard_backend == "system":
+        if config.server.clipboard_backend == "system":
             if is_system_clipboard_available():
                 return SystemClipboardBackend()
             warn_if_unavailable(logger, "system")
@@ -137,6 +138,12 @@ def create_app(config: RemoClipConfig) -> Flask:
             raise ValueError(f"{field} must be an integer") from exc
         if number <= 0:
             raise ValueError(f"{field} must be positive")
+        return number
+
+    def _parse_required_positive_int(value: Any, field: str) -> int:
+        number = _parse_optional_positive_int(value, field)
+        if number is None:
+            raise ValueError(f"{field} must be provided")
         return number
 
     def _validate_payload(data: dict[str, Any], expect_content: bool) -> dict[str, Any]:
@@ -227,10 +234,43 @@ def create_app(config: RemoClipConfig) -> Flask:
                         }
                         for item in query.all()
                     ]
-            _log_event(str(payload["hostname"]), "history", json.dumps(events))
+            log_payload: dict[str, Any] = {
+                "event_ids": [item["id"] for item in events],
+            }
+            if limit is not None:
+                log_payload["limit"] = limit
+            if event_id is not None:
+                log_payload["id"] = event_id
+            _log_event(
+                str(payload["hostname"]),
+                "history",
+                json.dumps(log_payload),
+            )
             return jsonify({"history": events})
         except Exception as exc:  # pragma: no cover - defensive
             logging.exception("Failed to handle /history request")
+            return jsonify({"error": str(exc)}), 400
+
+    @app.delete("/history")
+    def delete_history():
+        try:
+            data = request.get_json(force=True, silent=False)
+            payload = _validate_payload(data, expect_content=False)
+            event_id = _parse_required_positive_int(payload.get("id"), "id")
+
+            if not allow_deletions:
+                return jsonify({"error": "history deletions are disabled"}), 403
+
+            with session_scope(session_factory) as session:
+                event = session.get(ClipboardEvent, event_id)
+                if event is None or event.action == "history":
+                    return jsonify({"error": "history entry not found"}), 404
+                session.delete(event)
+            return jsonify({"status": "deleted"})
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:  # pragma: no cover - defensive
+            logging.exception("Failed to handle /history delete request")
             return jsonify({"error": str(exc)}), 400
 
     return app
@@ -254,7 +294,7 @@ def main() -> None:
     config = load_config(args.config)
     app = create_app(config)
 
-    serve(app, config.server, config.port)
+    serve(app, config.server.host, config.server.port)
 
 
 if __name__ == "__main__":  # pragma: no cover

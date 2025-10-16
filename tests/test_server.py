@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from pathlib import Path
@@ -13,19 +14,36 @@ from remoclip.clipboard import PrivateClipboardBackend
 from remoclip.db import ClipboardEvent, session_scope
 from remoclip.server_cli import create_app
 
+ClientConfig = config_module.ClientConfig
 RemoClipConfig = config_module.RemoClipConfig
+ServerConfig = config_module.ServerConfig
 SECURITY_TOKEN_HEADER = getattr(config_module, "SECURITY_TOKEN_HEADER", None)
 assert SECURITY_TOKEN_HEADER is not None
 
 
+def _make_config(
+    tmp_path: Path,
+    *,
+    clipboard_backend: config_module.ClipboardBackendName = "private",
+    security_token: str | None = None,
+    allow_deletions: bool = False,
+) -> RemoClipConfig:
+    return RemoClipConfig(
+        security_token=security_token,
+        server=ServerConfig(
+            host="127.0.0.1",
+            port=5000,
+            db=tmp_path / "db.sqlite",
+            clipboard_backend=clipboard_backend,
+            allow_deletions=allow_deletions,
+        ),
+        client=ClientConfig(url="http://127.0.0.1:5000"),
+    )
+
+
 @pytest.fixture
 def app(tmp_path):
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        clipboard_backend="private",
-    )
+    config = _make_config(tmp_path)
     application = create_app(config)
     application.config.update(TESTING=True)
     return application
@@ -45,13 +63,7 @@ def clipboard_backend(app):
 
 @pytest.fixture
 def secure_client(tmp_path):
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        security_token="shh",
-        clipboard_backend="private",
-    )
+    config = _make_config(tmp_path, security_token="shh")
     application = create_app(config)
     application.config.update(TESTING=True)
     return application.test_client()
@@ -121,6 +133,119 @@ def test_history_excludes_history_events(client):
     assert response.status_code == 200
     history = response.get_json()["history"]
     assert history[0]["action"] == "copy"
+
+
+def test_history_event_logs_request_metadata(client, app):
+    client.post("/copy", json={"hostname": "test", "content": "hello"})
+    client.post("/copy", json={"hostname": "test", "content": "world"})
+
+    session_factory = app.config["SESSION_FACTORY"]
+
+    def latest_history_event_content() -> str | None:
+        with session_scope(session_factory) as session:
+            entry = (
+                session.query(ClipboardEvent)
+                .filter(ClipboardEvent.action == "history")
+                .order_by(ClipboardEvent.id.desc())
+                .first()
+            )
+            if entry is None:
+                return None
+            return entry.content
+
+    response = client.get("/history", json={"hostname": "test"})
+    assert response.status_code == 200
+    all_events = response.get_json()["history"]
+    log_content = latest_history_event_content()
+    assert log_content is not None
+    payload = json.loads(log_content)
+    assert payload["event_ids"] == [item["id"] for item in all_events]
+    assert "limit" not in payload
+    assert "id" not in payload
+
+    response = client.get("/history", json={"hostname": "test", "limit": 1})
+    assert response.status_code == 200
+    limited_events = response.get_json()["history"]
+    log_content = latest_history_event_content()
+    assert log_content is not None
+    payload = json.loads(log_content)
+    assert payload["event_ids"] == [item["id"] for item in limited_events]
+    assert payload["limit"] == 1
+    assert "id" not in payload
+
+    target_id = all_events[-1]["id"]
+    response = client.get(
+        "/history", json={"hostname": "test", "id": target_id}
+    )
+    assert response.status_code == 200
+    specific_events = response.get_json()["history"]
+    assert [item["id"] for item in specific_events] == [target_id]
+    log_content = latest_history_event_content()
+    assert log_content is not None
+    payload = json.loads(log_content)
+    assert payload["event_ids"] == [target_id]
+    assert payload["id"] == target_id
+    assert "limit" not in payload
+
+
+def test_history_delete_requires_configuration(tmp_path):
+    config = _make_config(tmp_path)
+    application = create_app(config)
+    application.config.update(TESTING=True)
+    test_client = application.test_client()
+
+    response = test_client.delete(
+        "/history", json={"hostname": "test", "id": 1}
+    )
+    assert response.status_code == 403
+    assert response.get_json()["error"] == "history deletions are disabled"
+
+
+def test_history_delete_removes_event(tmp_path):
+    config = _make_config(tmp_path, allow_deletions=True)
+    application = create_app(config)
+    application.config.update(TESTING=True)
+    test_client = application.test_client()
+
+    test_client.post("/copy", json={"hostname": "test", "content": "hello"})
+
+    session_factory = application.config["SESSION_FACTORY"]
+    with session_scope(session_factory) as session:
+        copy_event_id = (
+            session.query(ClipboardEvent.id)
+            .filter(ClipboardEvent.action == "copy")
+            .order_by(ClipboardEvent.id.desc())
+            .scalar()
+        )
+
+    assert copy_event_id is not None
+
+    response = test_client.delete(
+        "/history", json={"hostname": "test", "id": copy_event_id}
+    )
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "deleted"
+
+    with session_scope(session_factory) as session:
+        deleted_event = session.get(ClipboardEvent, copy_event_id)
+        assert deleted_event is None
+        remaining_actions = [
+            action for (action,) in session.query(ClipboardEvent.action).all()
+        ]
+        assert remaining_actions == []
+
+
+def test_history_delete_missing_entry_returns_404(tmp_path):
+    config = _make_config(tmp_path, allow_deletions=True)
+    application = create_app(config)
+    application.config.update(TESTING=True)
+    test_client = application.test_client()
+
+    response = test_client.delete(
+        "/history", json={"hostname": "test", "id": 9999}
+    )
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "history entry not found"
 
 
 def test_security_token_required(secure_client):
@@ -199,12 +324,7 @@ def test_paste_specific_id_rejects_history_event(client, app):
 
 
 def test_private_backend_seeds_from_history(tmp_path):
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        clipboard_backend="private",
-    )
+    config = _make_config(tmp_path)
     first_app = create_app(config)
     first_app.config.update(TESTING=True)
     first_client = first_app.test_client()
@@ -220,12 +340,7 @@ def test_system_backend_falls_back_when_unavailable(tmp_path, monkeypatch, caplo
     monkeypatch.setattr("remoclip.clipboard.pyperclip", None, raising=False)
     caplog.set_level(logging.WARNING)
 
-    config = RemoClipConfig(
-        server="127.0.0.1",
-        port=5000,
-        db=tmp_path / "db.sqlite",
-        clipboard_backend="system",
-    )
+    config = _make_config(tmp_path, clipboard_backend="system")
     app = create_app(config)
 
     backend = app.config.get("CLIPBOARD_BACKEND")

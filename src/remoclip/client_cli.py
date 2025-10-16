@@ -129,18 +129,33 @@ class UnixSocketSession:
             timeout=timeout,
         )
 
+    def delete(
+        self,
+        url: str,
+        *,
+        json: dict[str, Any],
+        headers: dict[str, str] | None,
+        timeout: float,
+    ) -> _UnixSocketResponse:
+        return self._request(
+            "DELETE",
+            url,
+            json_payload=json,
+            headers=headers,
+            timeout=timeout,
+        )
+
 
 class RemoClipClient:
     def __init__(self, config: RemoClipConfig):
         self.config = config
-        socket_path = config.socket_path
+        socket_path = config.client.socket_path
         if socket_path is not None:
             encoded_path = quote(str(socket_path), safe="")
             self.base_url = f"http+unix://{encoded_path}"
             session = UnixSocketSession(socket_path)
         else:
-            scheme = "https" if config.use_https else "http"
-            self.base_url = f"{scheme}://{config.server}:{config.port}"
+            self.base_url = config.client.url.rstrip("/")
             session = RequestsSession()
         self._session = session
         self._headers = {}
@@ -197,6 +212,16 @@ class RemoClipClient:
         response.raise_for_status()
         return response.json()
 
+    def delete_history(self, event_id: int, timeout: float = 5.0) -> dict[str, Any]:
+        response = self._session.delete(
+            f"{self.base_url}/history",
+            json=self._payload({"id": event_id}),
+            headers=self._headers,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="remoclip client CLI")
@@ -220,14 +245,32 @@ def main() -> None:
         type=int,
         help="Retrieve a specific entry by id (available for paste and history commands)",
     )
+    parser.add_argument(
+        "--delete",
+        action="store_true",
+        help="Delete a specific history entry by id (history command only)",
+    )
+    parser.add_argument(
+        "-s",
+        "--strip",
+        action="store_true",
+        help=(
+            "Remove trailing newline characters from stdin before copying "
+            "(copy command only)"
+        ),
+    )
 
     args = parser.parse_args()
     config = load_config(args.config)
     client = RemoClipClient(config)
 
     try:
+        if args.strip and args.command not in ("copy", "c"):
+            raise ValueError("--strip can only be used with the copy command")
         if args.command in ("copy", "c"):
             content = sys.stdin.read()
+            if args.strip:
+                content = content.rstrip("\n")
             client.copy(content)
             sys.stdout.write(content)
         elif args.command in ("paste", "p"):
@@ -236,13 +279,24 @@ def main() -> None:
             content = client.paste(event_id=args.id)
             sys.stdout.write(content)
         elif args.command in ("history", "h"):
-            if args.limit is not None and args.limit <= 0:
-                raise ValueError("limit must be a positive integer")
-            if args.id is not None and args.id <= 0:
-                raise ValueError("id must be a positive integer")
-            history = client.history(limit=args.limit, event_id=args.id)
-            json.dump(history, sys.stdout, indent=2)
-            sys.stdout.write("\n")
+            if args.delete:
+                if args.id is None:
+                    raise ValueError("id must be provided when deleting a history entry")
+                if args.id <= 0:
+                    raise ValueError("id must be a positive integer")
+                if args.limit is not None:
+                    raise ValueError("limit cannot be combined with --delete")
+                result = client.delete_history(event_id=args.id)
+                json.dump(result, sys.stdout, indent=2)
+                sys.stdout.write("\n")
+            else:
+                if args.limit is not None and args.limit <= 0:
+                    raise ValueError("limit must be a positive integer")
+                if args.id is not None and args.id <= 0:
+                    raise ValueError("id must be a positive integer")
+                history = client.history(limit=args.limit, event_id=args.id)
+                json.dump(history, sys.stdout, indent=2)
+                sys.stdout.write("\n")
     except requests.RequestException as exc:
         sys.stderr.write(f"Request failed: {exc}\n")
         sys.exit(1)
