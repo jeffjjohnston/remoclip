@@ -1,5 +1,6 @@
 site_name: remoclip
 site_description: Local and remote CLI access to your clipboard
+site_url: https://remoclip.newmatter.net
 nav:
   - Home: index.md
   - Configuration: configuration.md
