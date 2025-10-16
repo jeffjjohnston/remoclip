@@ -1,6 +1,9 @@
 site_name: remoclip
 site_description: Local and remote CLI access to your clipboard
 site_url: https://remoclip.newmatter.net
+repo_url: https://github.com/jeffjjohnston/remoclip
+repo_name: GitHub
+
 nav:
   - Home: index.md
   - Configuration: configuration.md
@@ -11,11 +14,13 @@ nav:
 
 theme:
   name: material
+  custom_dir: docs/overrides
   features:
     - navigation.instant  # optional, for faster reloads
 
-repo_url: https://github.com/jeffjjohnston/remoclip
-repo_name: GitHub
+extra:
+  analytics:
+    provider: custom
 
 markdown_extensions:
   - admonition
