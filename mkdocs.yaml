@@ -14,7 +14,7 @@ theme:
     - navigation.instant  # optional, for faster reloads
 
 repo_url: https://github.com/jeffjjohnston/remoclip
-repo_name: jeffjjohnston/remoclip
+repo_name: GitHub
 
 markdown_extensions:
   - admonition
