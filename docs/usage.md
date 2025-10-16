@@ -25,13 +25,16 @@ When accessing a remote server over SSH you can expose your local `remoclip_serv
        socket: /tmp/remoclip-alice.sock
    ```
 
+    !!! note
+        Unfortunately SSH will not clean up the socket file when your session ends. You will need to manually delete it before reconnecting and requesting the same socket file.
+
 ## Cluster environments
 
-High performance computing clusters generally require you to connect to a head node via SSH and then open an interactive session on a compute node. In these situations, local port forwarding beyond the head node is often not possible, as either the compute nodes are not directly reachable from your workstation, or the cluster's job management tools don't allow additional port forward. A possible alternative is to launch a temporary [cloudflared](https://github.com/cloudflare/cloudflared) tunnel on your workstation. The tunnel can publish the `remoclip_server` localhost URL over a public HTTPS endpoint. When you take this approach it is crucial to set and use the `security_token` so only authorised clients can access your clipboard data. For example:
+High performance computing clusters generally require you to connect to a head node via SSH and then open an interactive session on a compute node. In these situations, local port forwarding beyond the head node is often not possible, as either the compute nodes are not directly reachable from your workstation, or the cluster's job management tools don't allow for proxying existing forwarded ports to the nodes. A possible alternative is to launch a temporary [cloudflared](https://github.com/cloudflare/cloudflared) tunnel on your workstation. The tunnel will publish your `remoclip_server` localhost URL over a public HTTPS endpoint. When you take this approach it is crucial to set and use the `security_token` so only authorised clients can access your clipboard data. For example:
 
 ```bash
 cloudflared tunnel --url http://127.0.0.1:35612
-# Outputs URL like https://some-random-words-here.trycloudflare.com that forwards to your remoclip server
+# Outputs a URL like https://some-random-words-here.trycloudflare.com that forwards to your remoclip server
 ```
 
 !!! warning

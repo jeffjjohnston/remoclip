@@ -63,6 +63,7 @@ If you want to avoid exposing a port on the remote system, Unix domain sockets a
 
 ```sh
 $ echo "Hello from my local machine." | remoclip copy
+Hello from my local machine.
 $ ssh -R /tmp/remoclip.sock:127.0.0.1:35612 user@myremotehost
 user@myremotehost$ echo -e "\nclient:\n\tsocket: /tmp/remoclip.sock" >> ~/.remoclip.yaml
 user@myremotehost$ remoclip paste
