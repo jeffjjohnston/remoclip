@@ -1,6 +1,6 @@
 # remoclip
 
-![PyPI - Downloads](https://img.shields.io/pypi/dm/remoclip)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/remoclip)](https://pypi.org/project/remoclip/)
 
 `remoclip` (**remo**te **clip**board) is a small tool for providing copy and paste clipboard functionality in the CLI - with a special emphasis on allowing access to your local machine's clipboard when connected to remote systems. The package provides two CLI scripts: `remoclip_server` and `remoclip`.
 
