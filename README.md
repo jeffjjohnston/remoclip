@@ -75,6 +75,6 @@ Hello from my local machine.
 Unfortunately, SSH does not automatically clean up the socket file when you disconnect your session. You'll need to delete it manually before you initiate a new connection with the same socket:
 
 ```sh
-$ ssh user@myremote rm /tmp/remoclip-user.sock
-$ ssh -R /tmp/remoclip-user.sock:127.0.0.1:35612 user@myremotehost
+$ ssh user@myremotehost rm /tmp/remoclip.sock
+$ ssh -R /tmp/remoclip.sock:127.0.0.1:35612 user@myremotehost
 ```
