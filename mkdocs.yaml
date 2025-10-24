@@ -6,6 +6,7 @@ repo_name: GitHub
 
 nav:
   - Home: index.md
+  - Video Demo: video.md
   - Configuration: configuration.md
   - Usage: usage.md
   - Server: server.md
