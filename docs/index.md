@@ -73,12 +73,13 @@ Hello from my local machine.
 Unfortunately, SSH does not automatically clean up the socket file when you disconnect your session. You'll need to delete it manually before you initiate a new connection with the same socket:
 
 ```sh
-$ ssh user@myremote rm /tmp/remoclip.sock
+$ ssh user@myremotehost rm /tmp/remoclip.sock
 $ ssh -R /tmp/remoclip.sock:127.0.0.1:35612 user@myremotehost
 ```
 
 ## Documentation layout
 
+- [Video Demo](video.md) is a brief installation and usage tutorial
 - [Configuration](configuration.md) describes the YAML settings used by both CLIs
 - [Usage](usage.md) describes some common setups 
 - [Server](server.md) documents the `remoclip_server` HTTP server
