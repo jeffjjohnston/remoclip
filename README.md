@@ -10,6 +10,8 @@
 
 See the full documentation at [remoclip.newmatter.net](https://remoclip.newmatter.net).
 
+Watch a [brief video demo](https://remoclip.newmatter.net/video/).
+
 ## Quick Start
 
 Install with uv or pip:
