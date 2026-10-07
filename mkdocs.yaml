@@ -6,7 +6,6 @@ repo_name: GitHub
 
 nav:
   - Home: index.md
-  - Video Demo: video.md
   - Configuration: configuration.md
   - Usage: usage.md
   - Server: server.md
@@ -15,7 +14,7 @@ nav:
 
 theme:
   name: material
-  custom_dir: docs/overrides
+  custom_dir: overrides
   features:
     - navigation.instant  # optional, for faster reloads
 
