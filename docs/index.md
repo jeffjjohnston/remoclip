@@ -8,6 +8,15 @@
     **Please pay attention to these warnings in the documentation. Allowing remote access to your local machine's clipboard is dangerous if not properly secured. Use the `security_token` feature and keep its value secret.**
 
 
+## Video demo
+
+Below is a brief 3 minute and 40 second video showing how to install and use remoclip, both locally and over an SSH connection to a remote host. In the video, remoclip is installed via the `uv` tool. Find out more about `uv` and how to install it using the [official documentation](https://docs.astral.sh/uv/). The [Quick Start](#quick-start) below has the same steps as text.
+
+<video width="1024" style="max-width: 100%;" controls>
+    <source src="https://videos.newmatter.net/remoclip/remoclip_demo_4k_2025-10-24.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
 ## Quick Start
 
 Install with uv or pip:
@@ -79,7 +88,7 @@ $ ssh -R /tmp/remoclip.sock:127.0.0.1:35612 user@myremotehost
 
 ## Documentation layout
 
-- [Video Demo](video.md) is a brief installation and usage tutorial
+- [Video demo](#video-demo) is a brief installation and usage tutorial
 - [Configuration](configuration.md) describes the YAML settings used by both CLIs
 - [Usage](usage.md) describes some common setups 
 - [Server](server.md) documents the `remoclip_server` HTTP server
